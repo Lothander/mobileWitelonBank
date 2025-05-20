@@ -4,6 +4,7 @@ import 'package:mobile_witelon_bank/services/auth_service.dart';
 import 'package:mobile_witelon_bank/services/account_service.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
+import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -156,9 +157,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.send),
                   label: const Text('Nowy Przelew'),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Funkcja "Nowy Przelew" wkrótce! (WBK-11)')),
-                    );
+                    Navigator.of(context).pushNamed(TransferScreen.routeName); // Zaktualizowana nawigacja
                   },
                 ),
                 ElevatedButton.icon(
@@ -190,12 +189,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 30),
             const Text(
-              'Ostatnie Transakcje', // TODO: Zintegrować z TransactionService (WBK-10)
+              'Ostatnie Transakcje',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: ListView( // TODO: Zastąpić dynamiczną listą transakcji z FutureBuilder (np. kilka ostatnich)
+              child: ListView(
                 children: const [
                   ListTile(leading: Icon(Icons.arrow_downward, color: Colors.green), title: Text('Wynagrodzenie'), trailing: Text('+ 5,000.00 PLN')),
                   ListTile(leading: Icon(Icons.arrow_upward, color: Colors.red), title: Text('Zakupy spożywcze'), trailing: Text('- 150.25 PLN')),

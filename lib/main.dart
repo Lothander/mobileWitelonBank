@@ -5,6 +5,7 @@ import 'package:mobile_witelon_bank/screens/login_screen.dart';
 import 'package:mobile_witelon_bank/screens/dashboard_screen.dart';
 import 'package:mobile_witelon_bank/screens/forgot_password_screen.dart';
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
+import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
 
 void main() {
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
           LoginScreen.routeName: (ctx) => const LoginScreen(),
           DashboardScreen.routeName: (ctx) => const DashboardScreen(),
           ForgotPasswordScreen.routeName: (ctx) => const ForgotPasswordScreen(),
+          TransferScreen.routeName: (ctx) => const TransferScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == TransactionHistoryScreen.routeName) {

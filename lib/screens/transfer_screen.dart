@@ -1,0 +1,270 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:mobile_witelon_bank/models/bank_account.dart';
+import 'package:mobile_witelon_bank/models/transfer_request_data.dart';
+import 'package:mobile_witelon_bank/services/auth_service.dart';
+import 'package:mobile_witelon_bank/services/account_service.dart';
+import 'package:mobile_witelon_bank/services/transaction_service.dart';
+
+class TransferScreen extends StatefulWidget {
+  static const routeName = '/transfer';
+
+  const TransferScreen({super.key});
+
+  @override
+  State<TransferScreen> createState() => _TransferScreenState();
+}
+
+class _TransferScreenState extends State<TransferScreen> {
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String? _feedbackMessage;
+  bool _isSuccess = false;
+
+  final _recipientAccountController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _recipientAddress1Controller = TextEditingController();
+  final _recipientAddress2Controller = TextEditingController();
+  final _titleController = TextEditingController();
+  final _amountController = TextEditingController();
+
+  List<BankAccount> _userAccounts = [];
+  BankAccount? _selectedSenderAccount;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserAccounts();
+  }
+
+  Future<void> _loadUserAccounts() async {
+    setState(() { _isLoading = true; });
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      if (authService.isAuthenticated && authService.token != null) {
+        final accountService = AccountService(
+          apiBaseUrl: AuthService.apiBaseUrl,
+          token: authService.token,
+        );
+        final accounts = await accountService.getAccounts();
+        if (mounted) {
+          setState(() {
+            _userAccounts = accounts;
+            if (_userAccounts.isNotEmpty) {
+              _selectedSenderAccount = _userAccounts[0];
+            }
+            _isLoading = false;
+          });
+        }
+      } else {
+        throw Exception("Użytkownik niezalogowany.");
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _feedbackMessage = "Błąd ładowania kont: ${error.toString().split(':').last.trim()}";
+          _isSuccess = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _submitTransfer() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    _formKey.currentState!.save();
+
+    if (_selectedSenderAccount == null) {
+      setState(() {
+        _feedbackMessage = "Proszę wybrać konto nadawcy.";
+        _isSuccess = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _feedbackMessage = null;
+      _isSuccess = false;
+    });
+
+    try {
+      final transferData = TransferRequestData(
+        senderAccountId: _selectedSenderAccount!.id,
+        recipientAccountNumber: _recipientAccountController.text,
+        recipientName: _recipientNameController.text,
+        recipientAddressLine1: _recipientAddress1Controller.text.isNotEmpty ? _recipientAddress1Controller.text : null,
+        recipientAddressLine2: _recipientAddress2Controller.text.isNotEmpty ? _recipientAddress2Controller.text : null,
+        title: _titleController.text,
+        amount: double.parse(_amountController.text.replaceAll(',', '.')),
+        currency: _selectedSenderAccount!.currency,
+      );
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final transactionService = TransactionService(
+        apiBaseUrl: AuthService.apiBaseUrl,
+        token: authService.token!,
+      );
+
+      final createdTransaction = await transactionService.makeTransfer(transferData);
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isSuccess = true;
+          _feedbackMessage = 'Przelew zlecony pomyślnie! ID Transakcji: ${createdTransaction.id}';
+          _formKey.currentState?.reset();
+          _recipientAccountController.clear();
+          _recipientNameController.clear();
+          _recipientAddress1Controller.clear();
+          _recipientAddress2Controller.clear();
+          _titleController.clear();
+          _amountController.clear();
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isSuccess = false;
+          _feedbackMessage = "Błąd przelewu: ${error.toString().split(':').last.trim()}";
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _recipientAccountController.dispose();
+    _recipientNameController.dispose();
+    _recipientAddress1Controller.dispose();
+    _recipientAddress2Controller.dispose();
+    _titleController.dispose();
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Nowy Przelew'),
+      ),
+      body: _isLoading && _userAccounts.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              if (_feedbackMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: Text(
+                    _feedbackMessage!,
+                    style: TextStyle(color: _isSuccess ? Colors.green : Colors.red, fontSize: 14, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+              // Wybór konta nadawcy
+              if (_userAccounts.isNotEmpty)
+                DropdownButtonFormField<BankAccount>(
+                  value: _selectedSenderAccount,
+                  decoration: const InputDecoration(
+                    labelText: 'Z konta',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _userAccounts.map((BankAccount account) {
+                    return DropdownMenuItem<BankAccount>(
+                      value: account,
+                      child: Text('${account.accountNumber} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
+                    );
+                  }).toList(),
+                  onChanged: (BankAccount? newValue) {
+                    setState(() {
+                      _selectedSenderAccount = newValue;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Proszę wybrać konto' : null,
+                )
+              else if (!_isLoading)
+                const Text('Brak dostępnych kont do wykonania przelewu.', style: TextStyle(color: Colors.red)),
+
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _recipientAccountController,
+                decoration: const InputDecoration(labelText: 'Numer konta odbiorcy (IBAN)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.account_balance)),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  // TODO: Dodać lepszą walidację IBAN
+                  if (!value.startsWith('PL') || value.length != 28) return 'Niepoprawny format IBAN PL (PL + 26 cyfr)';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _recipientNameController,
+                decoration: const InputDecoration(labelText: 'Nazwa odbiorcy', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person)),
+                validator: (value) => value == null || value.isEmpty ? 'Pole wymagane' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Tytuł przelewu', border: OutlineInputBorder(), prefixIcon: Icon(Icons.title)),
+                validator: (value) => value == null || value.isEmpty ? 'Pole wymagane' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _amountController,
+                decoration: InputDecoration(
+                  labelText: 'Kwota',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.attach_money),
+                  suffixText: _selectedSenderAccount?.currency ?? 'PLN',
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+([.,]?\d{0,2})')),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Pole wymagane';
+                  final amount = double.tryParse(value.replaceAll(',', '.'));
+                  if (amount == null || amount <= 0) return 'Niepoprawna kwota';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _recipientAddress1Controller,
+                decoration: const InputDecoration(labelText: 'Adres odbiorcy - linia 1 (opcjonalne)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_on_outlined)),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _recipientAddress2Controller,
+                decoration: const InputDecoration(labelText: 'Adres odbiorcy - linia 2 (opcjonalne)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.location_city_outlined)),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.send),
+                label: const Text('Wykonaj Przelew'),
+                onPressed: _isLoading ? null : _submitTransfer,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
