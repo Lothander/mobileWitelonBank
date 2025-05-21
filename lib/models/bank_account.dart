@@ -14,8 +14,7 @@ class BankAccount {
   factory BankAccount.fromJson(Map<String, dynamic> json) {
     final String balanceString = json['saldo'] as String? ?? "0.0";
     final double parsedBalance = double.tryParse(balanceString) ?? 0.0;
-
-    final String currencyValue = json['waluta'] as String? ?? 'N/A'; // Lub 'PLN', lub pusty string ''
+    final String currencyValue = json['waluta'] as String? ?? 'PLN';
 
     return BankAccount(
       id: json['id'] as int,

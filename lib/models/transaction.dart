@@ -1,6 +1,8 @@
+// lib/models/transaction.dart
+
 class Transaction {
   final int id;
-  final String transactionType;
+  final String transactionType; // Przechowuje 'typ_transakcji' lub 'typ' z JSON
   final int? senderAccountId;
   final String? senderAccountNumber;
   final String recipientAccountNumber;
@@ -36,9 +38,17 @@ class Transaction {
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
+    String transactionCurrency = 'N/A'; // Domyślna wartość
+    if (json.containsKey('waluta_przelewu') && json['waluta_przelewu'] != null) {
+      transactionCurrency = json['waluta_przelewu'] as String;
+    } else if (json.containsKey('waluta') && json['waluta'] != null) {
+      transactionCurrency = json['waluta'] as String;
+    }
+
     return Transaction(
       id: json['id'] as int,
-      transactionType: json['typ_transakcji'] as String? ?? 'Nieznany',
+      // Preferujemy 'typ_transakcji', jeśli istnieje; inaczej 'typ'
+      transactionType: json['typ_transakcji'] as String? ?? (json['typ'] as String? ?? 'Nieznany'),
       senderAccountId: json['id_konta_nadawcy'] as int?,
       senderAccountNumber: json['nr_konta_nadawcy'] as String?,
       recipientAccountNumber: json['nr_konta_odbiorcy'] as String? ?? 'Brak danych',
@@ -47,17 +57,28 @@ class Transaction {
       recipientAddressLine2: json['adres_odbiorcy_linia2'] as String?,
       title: json['tytul'] as String? ?? 'Brak tytułu',
       amount: (json['kwota'] as num? ?? 0).toDouble(),
-      currency: json['waluta'] as String? ?? 'N/A',
+      currency: transactionCurrency,
       status: json['status'] as String? ?? 'Nieznany',
       orderDate: DateTime.tryParse(json['data_zlecenia'] as String? ?? '') ?? DateTime(1970),
-      executionDate: json['data_realizacji'] != null ? DateTime.tryParse(json['data_realizacji'] as String) : null,
+      executionDate: json['data_realizacji'] != null && (json['data_realizacji'] as String).isNotEmpty
+          ? DateTime.tryParse(json['data_realizacji'] as String)
+          : null,
       returnInformation: json['informacja_zwrotna'] as String?,
-      createdAt: DateTime.tryParse(json['utworzono'] as String? ?? '') ?? DateTime(1970),
+      createdAt: DateTime.tryParse(json['utworzono'] as String? ?? (json['created_at'] as String? ?? '')) ?? DateTime(1970),
     );
   }
 
-
   bool get isIncoming {
-    return transactionType.toLowerCase().contains('przychodzacy') || (amount > 0 && senderAccountId == null);
+    // Logika bazuje na polu `transactionType`.
+    // Dostosuj, jeśli API dostarcza bardziej jednoznaczny wskaźnik.
+    if (transactionType.toLowerCase().contains('przychodzacy')) {
+      return true;
+    }
+    if (transactionType.toLowerCase().contains('wychodzacy')) {
+      return false;
+    }
+    // Fallback na podstawie kwoty, jeśli typ nie jest jednoznaczny
+    // (choć to może być mylące dla przelewów na tę samą kwotę w obie strony)
+    return amount > 0;
   }
 }

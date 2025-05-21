@@ -1,8 +1,10 @@
+// lib/screens/transfer_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
 import 'package:mobile_witelon_bank/models/transfer_request_data.dart';
+import 'package:mobile_witelon_bank/models/transaction.dart';
 import 'package:mobile_witelon_bank/services/auth_service.dart';
 import 'package:mobile_witelon_bank/services/account_service.dart';
 import 'package:mobile_witelon_bank/services/transaction_service.dart';
@@ -19,6 +21,7 @@ class TransferScreen extends StatefulWidget {
 class _TransferScreenState extends State<TransferScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  bool _isLoadingAccounts = false;
   String? _feedbackMessage;
   bool _isSuccess = false;
 
@@ -39,7 +42,8 @@ class _TransferScreenState extends State<TransferScreen> {
   }
 
   Future<void> _loadUserAccounts() async {
-    setState(() { _isLoading = true; });
+    setState(() { _isLoadingAccounts = true; _feedbackMessage = null; });
+    print("DEBUG: TransferScreen - Loading user accounts...");
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       if (authService.isAuthenticated && authService.token != null) {
@@ -53,17 +57,25 @@ class _TransferScreenState extends State<TransferScreen> {
             _userAccounts = accounts;
             if (_userAccounts.isNotEmpty) {
               _selectedSenderAccount = _userAccounts[0];
+              print("DEBUG: TransferScreen - User accounts loaded. Default sender: ${_selectedSenderAccount?.accountNumber}");
+            } else {
+              print("DEBUG: TransferScreen - User accounts loaded but list is empty.");
+              _feedbackMessage = "Brak dostępnych kont do wykonania przelewu.";
+              _isSuccess = false;
             }
-            _isLoading = false;
+            _isLoadingAccounts = false;
           });
         }
       } else {
+        print("DEBUG: TransferScreen - User not authenticated to load accounts.");
         throw Exception("Użytkownik niezalogowany.");
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      print("DEBUG: TransferScreen - Error loading accounts: $error");
+      print("DEBUG: TransferScreen - StackTrace for loading accounts error: $stackTrace");
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isLoadingAccounts = false;
           _feedbackMessage = "Błąd ładowania kont: ${error.toString().split(':').last.trim()}";
           _isSuccess = false;
         });
@@ -73,11 +85,12 @@ class _TransferScreenState extends State<TransferScreen> {
 
   Future<void> _submitTransfer() async {
     if (!_formKey.currentState!.validate()) {
+      print("DEBUG: TransferScreen - Form validation FAILED.");
       return;
     }
-    _formKey.currentState!.save();
 
     if (_selectedSenderAccount == null) {
+      print("DEBUG: TransferScreen - _selectedSenderAccount is NULL!");
       setState(() {
         _feedbackMessage = "Proszę wybrać konto nadawcy.";
         _isSuccess = false;
@@ -91,6 +104,29 @@ class _TransferScreenState extends State<TransferScreen> {
       _isSuccess = false;
     });
 
+    print("DEBUG: TransferScreen - Preparing transfer data:");
+    print("DEBUG: Sender Account ID: ${_selectedSenderAccount!.id}");
+    print("DEBUG: Recipient Account No: ${_recipientAccountController.text}");
+    print("DEBUG: Recipient Name: ${_recipientNameController.text}");
+    print("DEBUG: Title: ${_titleController.text}");
+    print("DEBUG: Amount (raw from controller): ${_amountController.text}");
+    final String cleanedAmountString = _amountController.text.replaceAll(',', '.');
+    print("DEBUG: Amount (cleaned string): $cleanedAmountString");
+    final double? parsedAmount = double.tryParse(cleanedAmountString);
+    print("DEBUG: Parsed Amount: $parsedAmount");
+    print("DEBUG: Currency: ${_selectedSenderAccount!.currency}");
+    print("DEBUG: Address 1: ${_recipientAddress1Controller.text}");
+    print("DEBUG: Address 2: ${_recipientAddress2Controller.text}");
+
+    if (parsedAmount == null) {
+      setState(() {
+        _isLoading = false;
+        _feedbackMessage = "Niepoprawny format kwoty.";
+        _isSuccess = false;
+      });
+      return;
+    }
+
     try {
       final transferData = TransferRequestData(
         senderAccountId: _selectedSenderAccount!.id,
@@ -99,7 +135,7 @@ class _TransferScreenState extends State<TransferScreen> {
         recipientAddressLine1: _recipientAddress1Controller.text.isNotEmpty ? _recipientAddress1Controller.text : null,
         recipientAddressLine2: _recipientAddress2Controller.text.isNotEmpty ? _recipientAddress2Controller.text : null,
         title: _titleController.text,
-        amount: double.parse(_amountController.text.replaceAll(',', '.')),
+        amount: parsedAmount,
         currency: _selectedSenderAccount!.currency,
       );
 
@@ -109,23 +145,44 @@ class _TransferScreenState extends State<TransferScreen> {
         token: authService.token!,
       );
 
-      final createdTransaction = await transactionService.makeTransfer(transferData);
+      print("DEBUG: TransferScreen - Calling transactionService.makeTransfer...");
+      final Transaction createdTransaction = await transactionService.makeTransfer(transferData);
 
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _isSuccess = true;
-          _feedbackMessage = 'Przelew zlecony pomyślnie! ID Transakcji: ${createdTransaction.id}';
-          _formKey.currentState?.reset();
-          _recipientAccountController.clear();
-          _recipientNameController.clear();
-          _recipientAddress1Controller.clear();
-          _recipientAddress2Controller.clear();
-          _titleController.clear();
-          _amountController.clear();
-        });
+        // Komunikat o sukcesie jest teraz wyświetlany przez SnackBar
+        // setState(() {
+        //   _isLoading = false;
+        //   _isSuccess = true;
+        //   _feedbackMessage = 'Przelew zlecony pomyślnie! ID Transakcji: ${createdTransaction.id}';
+        // });
+        // _formKey.currentState?.reset();
+        // _recipientAccountController.clear();
+        // _recipientNameController.clear();
+        // _recipientAddress1Controller.clear();
+        // _recipientAddress2Controller.clear();
+        // _titleController.clear();
+        // _amountController.clear();
+        // if (_userAccounts.isNotEmpty) {
+        //   _selectedSenderAccount = _userAccounts[0];
+        // }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Przelew zlecony pomyślnie! ID: ${createdTransaction.id}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3), // SnackBar będzie widoczny przez 3 sekundy
+          ),
+        );
+
+        // Odczekaj chwilę zanim zamkniesz ekran, aby użytkownik zobaczył SnackBar
+        await Future.delayed(const Duration(seconds: 1)); // Krótsze opóźnienie, SnackBar ma swój czas
+        if (mounted) {
+          Navigator.of(context).pop(true); // Wróć i przekaż 'true' jako sygnał do odświeżenia
+        }
       }
-    } catch (error) {
+    } catch (error, stackTrace) {
+      print("DEBUG: TransferScreen - Error in _submitTransfer: $error");
+      print("DEBUG: TransferScreen - StackTrace for _submitTransfer error: $stackTrace");
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -153,8 +210,8 @@ class _TransferScreenState extends State<TransferScreen> {
       appBar: AppBar(
         title: const Text('Nowy Przelew'),
       ),
-      body: _isLoading && _userAccounts.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+      body: _isLoadingAccounts
+          ? const Center(child: CircularProgressIndicator(key: ValueKey("loadingAccountsIndicator")))
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -162,23 +219,23 @@ class _TransferScreenState extends State<TransferScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (_feedbackMessage != null)
+              if (_feedbackMessage != null && !_isLoading) // Pokaż feedback tylko jeśli nie ładujemy
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(
                     _feedbackMessage!,
-                    style: TextStyle(color: _isSuccess ? Colors.green : Colors.red, fontSize: 14, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: _isSuccess ? Colors.green.shade700 : Colors.red.shade700, fontSize: 14, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ),
 
-              // Wybór konta nadawcy
               if (_userAccounts.isNotEmpty)
                 DropdownButtonFormField<BankAccount>(
                   value: _selectedSenderAccount,
                   decoration: const InputDecoration(
                     labelText: 'Z konta',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.account_balance_wallet),
                   ),
                   items: _userAccounts.map((BankAccount account) {
                     return DropdownMenuItem<BankAccount>(
@@ -193,8 +250,15 @@ class _TransferScreenState extends State<TransferScreen> {
                   },
                   validator: (value) => value == null ? 'Proszę wybrać konto' : null,
                 )
-              else if (!_isLoading)
-                const Text('Brak dostępnych kont do wykonania przelewu.', style: TextStyle(color: Colors.red)),
+              else if (!_isLoading && _userAccounts.isEmpty && _feedbackMessage == null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Text(
+                    _feedbackMessage ?? 'Brak dostępnych kont do wykonania przelewu. Upewnij się, że jesteś zalogowany i masz przypisane konta.',
+                    style: TextStyle(color: Colors.orange.shade700, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
 
               const SizedBox(height: 16),
               TextFormField(
@@ -202,8 +266,7 @@ class _TransferScreenState extends State<TransferScreen> {
                 decoration: const InputDecoration(labelText: 'Numer konta odbiorcy (IBAN)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.account_balance)),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Pole wymagane';
-                  // TODO: Dodać lepszą walidację IBAN
-                  if (!value.startsWith('PL') || value.length != 28) return 'Niepoprawny format IBAN PL (PL + 26 cyfr)';
+                  if (!RegExp(r'^PL\d{26}$').hasMatch(value)) return 'Niepoprawny format IBAN PL (PL + 26 cyfr)';
                   return null;
                 },
               ),
@@ -230,12 +293,15 @@ class _TransferScreenState extends State<TransferScreen> {
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'^\d+([.,]?\d{0,2})')),
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*([.,]?\d{0,2})')),
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Pole wymagane';
                   final amount = double.tryParse(value.replaceAll(',', '.'));
-                  if (amount == null || amount <= 0) return 'Niepoprawna kwota';
+                  if (amount == null || amount <= 0) return 'Niepoprawna kwota (musi być większa od 0)';
+                  if (_selectedSenderAccount != null && amount > _selectedSenderAccount!.balance) {
+                    return 'Niewystarczające środki na wybranym koncie';
+                  }
                   return null;
                 },
               ),
@@ -253,7 +319,7 @@ class _TransferScreenState extends State<TransferScreen> {
               ElevatedButton.icon(
                 icon: const Icon(Icons.send),
                 label: const Text('Wykonaj Przelew'),
-                onPressed: _isLoading ? null : _submitTransfer,
+                onPressed: (_isLoading || _isLoadingAccounts || _userAccounts.isEmpty) ? null : _submitTransfer,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
