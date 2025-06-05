@@ -1,4 +1,3 @@
-// lib/services/transaction_service.dart
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -68,7 +67,7 @@ class TransactionService {
     } on TimeoutException catch (e) {
       print('DEBUG: TransactionService.getTransactionHistory - TimeoutException: $e');
       throw Exception('Serwer nie odpowiedział w wyznaczonym czasie. Sprawdź połączenie.');
-    } catch (error, stackTrace) { // Dodano stackTrace dla lepszego debugowania
+    } catch (error, stackTrace) {
       print('DEBUG: TransactionService.getTransactionHistory - CatchAll Error: $error');
       print('DEBUG: TransactionService.getTransactionHistory - StackTrace: $stackTrace');
       if (error is Exception) rethrow;
@@ -105,13 +104,10 @@ class TransactionService {
       final responseData = jsonDecode(response.body);
 
       if (response.statusCode == 201) {
-        // Odpowiedź API jest obiektem z kluczem "data", który zawiera obiekt transakcji
         if (responseData is Map<String, dynamic> && responseData.containsKey('data')) {
           final transactionJson = responseData['data'] as Map<String, dynamic>;
-          // Teraz przekazujemy poprawny obiekt do Transaction.fromJson
           return Transaction.fromJson(transactionJson);
         } else {
-          // Jeśli struktura odpowiedzi jest inna niż oczekiwana
           print("DEBUG: TransactionService.makeTransfer - Unexpected response structure for 201. 'data' key missing or not an object.");
           throw Exception('Nieoczekiwana struktura odpowiedzi po utworzeniu przelewu.');
         }

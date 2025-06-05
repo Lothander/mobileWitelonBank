@@ -1,4 +1,3 @@
-// lib/screens/transaction_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -19,9 +18,6 @@ class TransactionHistoryScreen extends StatefulWidget {
 
 class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
   late Future<List<Transaction>> _transactionsFuture;
-  // int _currentPage = 1; // Dla przyszłej paginacji
-  // final int _perPage = 15;
-  // String? _selectedTypeFilter;
 
   @override
   void initState() {
@@ -40,9 +36,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       setState(() {
         _transactionsFuture = transactionService.getTransactionHistory(
           widget.account.id,
-          // page: _currentPage, // Dla przyszłej paginacji
-          // perPage: _perPage,
-          // type: _selectedTypeFilter,
         );
       });
     } else {
@@ -117,11 +110,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                         isIncoming
                             ? (transaction.senderAccountNumber != null && transaction.senderAccountNumber!.isNotEmpty
                             ? 'Od: ${transaction.senderAccountNumber}'
-                        // Jeśli to wpłata, a nie ma senderAccountNumber, może to być np. nazwa wpłacającego lub opis.
-                        // API w odpowiedzi na przelew zwracało 'nazwa_odbiorcy', ale tu to może być 'nazwa_nadawcy'.
-                        // Jeśli 'nazwa_odbiorcy' w modelu Transaction jest dla odbiorcy przelewu wychodzącego.
-                        // Warto sprawdzić, jakie dane przychodzą dla transakcji przychodzących.
-                        // Na razie, jeśli nie ma nadawcy, wyświetlmy typ transakcji.
                             : transaction.recipientName.isNotEmpty ? 'Od: ${transaction.recipientName}' : transaction.transactionType)
                             : 'Do: ${transaction.recipientName} (${transaction.recipientAccountNumber})',
                         style: TextStyle(color: Colors.grey[700], fontSize: 12),
@@ -135,12 +123,6 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     ],
                   ),
                   trailing: Text(
-                    // Używamy transaction.amount bezpośrednio, jeśli API zwraca kwoty z odpowiednim znakiem
-                    // Jeśli API zwraca zawsze dodatnie kwoty, a typ określa kierunek, to:
-                    // '${isIncoming ? "+" : "-"} ${transaction.amount.abs().toStringAsFixed(2)} ${transaction.currency}',
-                    // Na podstawie logu dla przelewu, kwota była dodatnia, a typ określał kierunek.
-                    // Jeśli API dla historii zwraca kwoty z właściwym znakiem (+/-), to poniższe jest OK.
-                    // Jeśli nie, trzeba będzie dostosować.
                     '${transaction.amount.toStringAsFixed(2)} ${transaction.currency}',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -150,7 +132,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                   ),
                   isThreeLine: true,
                   onTap: () {
-                    // _showTransactionDetailsDialog(context, transaction);
+                    //
                   },
                 );
               },

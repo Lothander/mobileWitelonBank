@@ -1,4 +1,3 @@
-// lib/screens/transfer_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -149,35 +148,18 @@ class _TransferScreenState extends State<TransferScreen> {
       final Transaction createdTransaction = await transactionService.makeTransfer(transferData);
 
       if (mounted) {
-        // Komunikat o sukcesie jest teraz wyświetlany przez SnackBar
-        // setState(() {
-        //   _isLoading = false;
-        //   _isSuccess = true;
-        //   _feedbackMessage = 'Przelew zlecony pomyślnie! ID Transakcji: ${createdTransaction.id}';
-        // });
-        // _formKey.currentState?.reset();
-        // _recipientAccountController.clear();
-        // _recipientNameController.clear();
-        // _recipientAddress1Controller.clear();
-        // _recipientAddress2Controller.clear();
-        // _titleController.clear();
-        // _amountController.clear();
-        // if (_userAccounts.isNotEmpty) {
-        //   _selectedSenderAccount = _userAccounts[0];
-        // }
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Przelew zlecony pomyślnie! ID: ${createdTransaction.id}'),
             backgroundColor: Colors.green,
-            duration: const Duration(seconds: 3), // SnackBar będzie widoczny przez 3 sekundy
+            duration: const Duration(seconds: 3),
           ),
         );
 
-        // Odczekaj chwilę zanim zamkniesz ekran, aby użytkownik zobaczył SnackBar
-        await Future.delayed(const Duration(seconds: 1)); // Krótsze opóźnienie, SnackBar ma swój czas
+        await Future.delayed(const Duration(seconds: 1));
         if (mounted) {
-          Navigator.of(context).pop(true); // Wróć i przekaż 'true' jako sygnał do odświeżenia
+          Navigator.of(context).pop(true);
         }
       }
     } catch (error, stackTrace) {
@@ -219,7 +201,7 @@ class _TransferScreenState extends State<TransferScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (_feedbackMessage != null && !_isLoading) // Pokaż feedback tylko jeśli nie ładujemy
+              if (_feedbackMessage != null && !_isLoading)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(

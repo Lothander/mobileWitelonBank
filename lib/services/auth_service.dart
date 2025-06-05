@@ -62,7 +62,6 @@ class AuthService with ChangeNotifier {
   String? _token;
   final _storage = const FlutterSecureStorage();
 
-  // Stała dla bazowego URL API, można ją przenieść do globalnej konfiguracji
   static const String apiBaseUrl = 'https://witelonapi.host358482.xce.pl/api';
 
   User? get currentUser => _currentUser;
@@ -83,7 +82,6 @@ class AuthService with ChangeNotifier {
         _currentUser = User.fromJson(jsonDecode(storedUserJson) as Map<String, dynamic>);
         notifyListeners();
       } catch (e) {
-        // Ten print jest ważny do diagnozowania problemów z auto-logowaniem
         print("Błąd podczas automatycznego logowania: $e");
         await _clearAuthData();
       }
@@ -210,7 +208,6 @@ class AuthService with ChangeNotifier {
     _token = null;
     await _storage.delete(key: 'authToken');
     await _storage.delete(key: 'currentUser');
-    // print("AuthService - Dane autoryzacyjne wyczyszczone."); // Ten może być zbyt częsty
   }
 
   Future<String> requestPasswordReset(String email) async {
@@ -228,7 +225,6 @@ class AuthService with ChangeNotifier {
       final responseData = jsonDecode(response.body);
       final message = responseData['message'] as String?;
 
-      // Logowanie odpowiedzi
       print("AuthService.requestPasswordReset - Odpowiedź: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200) {

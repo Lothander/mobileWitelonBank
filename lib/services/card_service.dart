@@ -1,4 +1,3 @@
-// lib/services/card_service.dart
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -36,7 +35,6 @@ class CardService {
     }
   }
 
-  // Uniwersalna metoda do parsowania odpowiedzi z operacji PATCH na karcie
   PaymentCard _parseCardUpdateResponse(http.Response response) {
     final responseBody = response.body;
     print("DEBUG: CardService._parseCardUpdateResponse - Status: ${response.statusCode}, Body: $responseBody");
@@ -55,7 +53,7 @@ class CardService {
         if (errorData.containsKey('message')) {
           errorMessage = errorData['message'] as String;
         }
-      } catch (_) {} // Ignoruj błąd parsowania JSONa błędu
+      } catch (_) {}
       print("DEBUG: CardService._parseCardUpdateResponse - Error: $errorMessage");
       throw Exception(errorMessage);
     }

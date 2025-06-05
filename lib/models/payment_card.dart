@@ -1,21 +1,18 @@
-// lib/models/payment_card.dart
-
 class PaymentCard {
   final int id;
   final int accountId;
-  final String cardNumber; // Będzie przechowywać zamaskowany numer
+  final String cardNumber;
   final DateTime expiryDate;
   final bool isBlocked;
   final double dailyLimit;
   final String cardType;
-  final bool? internetPaymentsActive; // Nowe pole
-  final bool? contactlessPaymentsActive; // Nowe pole
-  //created_at i updated_at są w odpowiedzi, ale pomijamy je w modelu na razie dla uproszczenia
+  final bool? internetPaymentsActive;
+  final bool? contactlessPaymentsActive; 
 
   PaymentCard({
     required this.id,
     required this.accountId,
-    required this.cardNumber, // To będzie nr_karty_masked lub nr_karty
+    required this.cardNumber,
     required this.expiryDate,
     required this.isBlocked,
     required this.dailyLimit,
@@ -25,7 +22,6 @@ class PaymentCard {
   });
 
   factory PaymentCard.fromJson(Map<String, dynamic> json) {
-    // Sprawdzamy, który klucz dla numeru karty jest dostępny
     String cardNumberValue = 'Brak numeru';
     if (json.containsKey('nr_karty_masked') && json['nr_karty_masked'] != null) {
       cardNumberValue = json['nr_karty_masked'] as String;
@@ -33,7 +29,6 @@ class PaymentCard {
       cardNumberValue = json['nr_karty'] as String;
     }
 
-    // Obsługa 'limit_dzienny' jako String lub Number
     double parsedDailyLimit = 0.0;
     if (json['limit_dzienny'] != null) {
       if (json['limit_dzienny'] is String) {
@@ -43,19 +38,18 @@ class PaymentCard {
       }
     }
 
-    // id_konta może być bezpośrednio lub w zagnieżdżonym obiekcie 'konto'
     int accId;
     if (json.containsKey('id_konta')) {
       accId = json['id_konta'] as int? ?? 0;
     } else if (json.containsKey('konto') && json['konto'] is Map) {
       accId = (json['konto'] as Map<String, dynamic>)['id'] as int? ?? 0;
     } else {
-      accId = 0; // Domyślna wartość, jeśli nie znaleziono
+      accId = 0;
     }
 
 
     return PaymentCard(
-      id: json['id'] as int? ?? 0, // Jeśli ID może brakować w jakiejś odpowiedzi
+      id: json['id'] as int? ?? 0,
       accountId: accId,
       cardNumber: cardNumberValue,
       expiryDate: DateTime.tryParse(json['data_waznosci'] as String? ?? '') ?? DateTime(1970),
@@ -72,7 +66,6 @@ class PaymentCard {
     double? dailyLimit,
     bool? internetPaymentsActive,
     bool? contactlessPaymentsActive,
-    // Dodajemy, bo API je zwraca po PATCH
   }) {
     return PaymentCard(
       id: id,
@@ -87,15 +80,10 @@ class PaymentCard {
     );
   }
 
-  // Getter maskedCardNumber nie jest już tak potrzebny, jeśli API zwraca nr_karty_masked
-  // ale zostawmy go, jeśli nr_karty czasami jest pełny.
-  // W UI będziemy używać po prostu pola `cardNumber`.
   String get maskedCardNumber {
-    // Jeśli pole cardNumber już jest zamaskowane przez API (np. zawiera "****")
     if (cardNumber.contains('*')) {
       return cardNumber;
     }
-    // Jeśli to pełny numer, maskujemy go
     if (cardNumber.length > 4) {
       return '**** **** **** ${cardNumber.substring(cardNumber.length - 4)}';
     }

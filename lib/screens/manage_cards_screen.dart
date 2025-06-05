@@ -1,4 +1,3 @@
-// lib/screens/manage_cards_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -241,11 +240,9 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // === POPRAWIONY WARUNEK ===
               currentSettingState != null
                   ? Text('Aktualny stan: ${currentSettingState ? "Włączone" : "Wyłączone"}')
                   : const Text('Aktualny stan: Nieznany (odśwież listę kart)'),
-              // === KONIEC POPRAWIONEGO WARUNKU ===
               const SizedBox(height: 10),
               const Text('Wybierz nową opcję:'),
             ],
