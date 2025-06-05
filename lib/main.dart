@@ -6,8 +6,9 @@ import 'package:mobile_witelon_bank/screens/dashboard_screen.dart';
 import 'package:mobile_witelon_bank/screens/forgot_password_screen.dart';
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
 import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
-import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart'; // Dodany import
+import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
+import 'package:mobile_witelon_bank/screens/manage_standing_orders_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,7 +37,7 @@ class MyApp extends StatelessWidget {
           DashboardScreen.routeName: (ctx) => const DashboardScreen(),
           ForgotPasswordScreen.routeName: (ctx) => const ForgotPasswordScreen(),
           TransferScreen.routeName: (ctx) => const TransferScreen(),
-          // Trasy wymagające argumentów są obsługiwane przez onGenerateRoute
+          ManageStandingOrdersScreen.routeName: (ctx) => const ManageStandingOrdersScreen(),
         },
         onGenerateRoute: (settings) {
           if (settings.name == TransactionHistoryScreen.routeName) {
@@ -50,7 +51,7 @@ class MyApp extends StatelessWidget {
             }
             print("Błąd nawigacji do TransactionHistoryScreen: Nieprawidłowe argumenty.");
             return _errorRoute("Błąd: Nie udało się załadować historii transakcji z powodu braku danych konta.");
-          } else if (settings.name == ManageCardsScreen.routeName) { // Dodana obsługa dla ManageCardsScreen
+          } else if (settings.name == ManageCardsScreen.routeName) {
             final args = settings.arguments;
             if (args is BankAccount) {
               return MaterialPageRoute(
@@ -62,14 +63,12 @@ class MyApp extends StatelessWidget {
             print("Błąd nawigacji do ManageCardsScreen: Nieprawidłowe argumenty.");
             return _errorRoute("Błąd: Nie udało się załadować zarządzania kartami z powodu braku danych konta.");
           }
-          // assert(false, 'Potrzebna implementacja dla ${settings.name}'); // Można odkomentować w trybie deweloperskim
           return null;
         },
       ),
     );
   }
 
-  // Pomocnicza metoda do generowania trasy błędu
   static MaterialPageRoute _errorRoute(String message) {
     return MaterialPageRoute(
       builder: (_) => Scaffold(

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_witelon_bank/services/auth_service.dart';
 import 'package:mobile_witelon_bank/services/account_service.dart';
-import 'package:mobile_witelon_bank/services/transaction_service.dart'; // Dodany import
+import 'package:mobile_witelon_bank/services/transaction_service.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
-import 'package:mobile_witelon_bank/models/transaction.dart'; // Dodany import
+import 'package:mobile_witelon_bank/models/transaction.dart';
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
 import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
+import 'package:mobile_witelon_bank/screens/manage_standing_orders_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -265,6 +266,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () {
                     if (_selectedAccount != null) { Navigator.of(context).pushNamed(ManageCardsScreen.routeName, arguments: _selectedAccount!); }
                     else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz konto, aby zarządzać kartami lub brak kont.'))); }
+                  },
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.event_repeat),
+                  label: const Text('Zlecenia Stałe'),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(ManageStandingOrdersScreen.routeName);
                   },
                 ),
               ],
