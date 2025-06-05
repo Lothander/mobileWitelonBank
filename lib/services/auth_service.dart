@@ -118,7 +118,6 @@ class AuthService with ChangeNotifier {
       } else if (response.statusCode == 500) {
         return LoginStep1Result(status: LoginStep1ResultStatus.serverError, message: message ?? 'Błąd serwera. Spróbuj ponownie później.');
       } else {
-        // Logowanie nieoczekiwanych odpowiedzi serwera
         print("AuthService.loginStep1 - Nieoczekiwana odpowiedź: ${response.statusCode}, Body: ${response.body}");
         return LoginStep1Result(status: LoginStep1ResultStatus.networkError, message: 'Nieoczekiwany błąd: ${response.statusCode}');
       }
@@ -162,14 +161,12 @@ class AuthService with ChangeNotifier {
             return true;
           }
         }
-        // Logowanie problemu, jeśli odpowiedź jest 200, ale brakuje danych
         print('AuthService.loginStep2 - Odpowiedź 2FA OK (200), ale brak tokenu/usera: ${response.body}');
         await _clearAuthData();
         return false;
       } else {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
         final message = responseData['message'] as String?;
-        // Logowanie błędów weryfikacji 2FA
         print('AuthService.loginStep2 - Błąd weryfikacji 2FA: ${response.statusCode} - $message. Body: ${response.body}');
         await _clearAuthData();
         return false;

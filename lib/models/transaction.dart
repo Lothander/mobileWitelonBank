@@ -38,7 +38,7 @@ class Transaction {
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
-    String transactionCurrency = 'N/A'; // Domyślna wartość
+    String transactionCurrency = 'N/A';
     if (json.containsKey('waluta_przelewu') && json['waluta_przelewu'] != null) {
       transactionCurrency = json['waluta_przelewu'] as String;
     } else if (json.containsKey('waluta') && json['waluta'] != null) {
@@ -46,8 +46,7 @@ class Transaction {
     }
 
     return Transaction(
-      id: json['id'] as int,
-      // Preferujemy 'typ_transakcji', jeśli istnieje; inaczej 'typ'
+      id: json['id'] as int? ?? 0, // Dodano ?? 0 dla bezpieczeństwa
       transactionType: json['typ_transakcji'] as String? ?? (json['typ'] as String? ?? 'Nieznany'),
       senderAccountId: json['id_konta_nadawcy'] as int?,
       senderAccountNumber: json['nr_konta_nadawcy'] as String?,
@@ -68,17 +67,24 @@ class Transaction {
     );
   }
 
+  // Poprawiony getter isIncoming, aby bazował na polu transactionType
+  // Załóżmy, że API dla 'typ_transakcji' lub 'typ' zwraca coś zawierającego 'przychodzacy' dla wpłat
   bool get isIncoming {
-    // Logika bazuje na polu `transactionType`.
-    // Dostosuj, jeśli API dostarcza bardziej jednoznaczny wskaźnik.
-    if (transactionType.toLowerCase().contains('przychodzacy')) {
-      return true;
+    // Przykładowe wartości, które mogą oznaczać transakcję przychodzącą. Dostosuj do swojego API.
+    List<String> incomingKeywords = ['przychodzacy', 'incoming', 'credit', 'wpłata'];
+    for (String keyword in incomingKeywords) {
+      if (transactionType.toLowerCase().contains(keyword)) {
+        return true;
+      }
     }
-    if (transactionType.toLowerCase().contains('wychodzacy')) {
-      return false;
-    }
-    // Fallback na podstawie kwoty, jeśli typ nie jest jednoznaczny
-    // (choć to może być mylące dla przelewów na tę samą kwotę w obie strony)
-    return amount > 0;
+    // Jeśli typ nie jest jednoznacznie przychodzący, a kwota jest dodatnia, można to uznać za przychodzącą.
+    // Jednak jeśli API zawsze ustawia typ_transakcji, ta druga część może nie być potrzebna.
+    // Sprawdź, jak Twoje API oznacza przelewy wewnętrzne (między własnymi kontami), jeśli kwota może być dodatnia.
+    // Wcześniej miałeś też w logu pole "typ": "przychodzacy" - jeśli ono jest bardziej wiarygodne,
+    // to `transactionType` powinno przechowywać wartość z `json['typ']` z priorytetem.
+    // W obecnej implementacji Transaction.fromJson:
+    // transactionType: json['typ_transakcji'] as String? ?? (json['typ'] as String? ?? 'Nieznany'),
+    // to pole transactionType będzie zawierało wartość z 'typ_transakcji' lub 'typ'.
+    return amount > 0 && !transactionType.toLowerCase().contains('wychodzacy'); // Ostrożniejsze założenie
   }
 }

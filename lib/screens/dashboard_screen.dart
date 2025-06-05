@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_witelon_bank/services/auth_service.dart';
 import 'package:mobile_witelon_bank/services/account_service.dart';
+import 'package:mobile_witelon_bank/services/transaction_service.dart'; // Dodany import
 import 'package:mobile_witelon_bank/models/bank_account.dart';
+import 'package:mobile_witelon_bank/models/transaction.dart'; // Dodany import
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
 import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
+import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
-
   const DashboardScreen({super.key});
 
   @override
@@ -18,87 +20,131 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<List<BankAccount>>? _accountsFuture;
-  List<BankAccount> _userAccounts = []; // Lista do przechowywania pobranych kont
+  List<BankAccount> _userAccounts = [];
   BankAccount? _selectedAccount;
+
+  List<Transaction> _recentTransactions = [];
+  bool _isLoadingRecentTransactions = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_accountsFuture == null) {
-      _loadAccountData();
+      _loadAccountDataAndRecentTransactions();
     }
   }
 
-  void _loadAccountData() {
+  Future<void> _loadAccountDataAndRecentTransactions() async {
+    // Najpierw ładujemy dane konta
     final authService = Provider.of<AuthService>(context, listen: false);
-    if (authService.isAuthenticated && authService.token != null) {
-      final accountService = AccountService(
-        apiBaseUrl: _DashboardScreenState.AuthService_apiBaseUrl,
-        token: authService.token,
-      );
-      // Nie używamy setState bezpośrednio na _accountsFuture tutaj,
-      // aby uniknąć wielokrotnego przebudowywania całego drzewa przez FutureBuilder,
-      // jeśli tylko zmieniamy _selectedAccount.
-      // FutureBuilder będzie nadal używał początkowego _accountsFuture.
-      // Aktualizujemy _userAccounts i _selectedAccount, co spowoduje przebudowę Dropdown i salda.
-
-      // Przypisujemy future, aby FutureBuilder mógł na nim operować
-      // Robimy to tylko raz, aby uniknąć ponownego ładowania przy każdym setState
-      if (mounted && _accountsFuture == null) { // Zabezpieczenie przed wielokrotnym przypisaniem
-        _accountsFuture = accountService.getAccounts();
-      }
-
-      // Po pobraniu danych, aktualizujemy stan komponentu
-      _accountsFuture?.then((accounts) {
-        if (mounted) {
-          setState(() {
-            _userAccounts = accounts;
-            if (accounts.isNotEmpty && _selectedAccount == null) { // Ustaw domyślne tylko jeśli jeszcze nie wybrano
-              _selectedAccount = accounts[0];
-            } else if (accounts.isNotEmpty && _selectedAccount != null) {
-              // Upewnij się, że _selectedAccount jest nadal ważnym kontem z listy
-              // (np. po odświeżeniu, jeśli lista kont się zmieniła)
-              // Ta logika może być bardziej skomplikowana, jeśli ID kont mogą się zmieniać.
-              // Na razie zakładamy, że odświeżenie nie zmienia ID istniejących kont.
-              bool currentSelectionIsValid = accounts.any((acc) => acc.id == _selectedAccount!.id);
-              if (!currentSelectionIsValid) {
-                _selectedAccount = accounts[0];
-              }
-            } else { // Jeśli lista kont jest pusta
-              _selectedAccount = null;
-            }
-          });
-        }
-        return accounts; // Zwracamy dla FutureBuilder, jeśli jest to pierwsze ładowanie
-      }).catchError((error) {
-        if (mounted) {
-          setState(() {
-            _userAccounts = []; // Wyczyść listę kont w przypadku błędu
-            _selectedAccount = null;
-          });
-        }
-        // Błąd zostanie obsłużony przez FutureBuilder
-        // throw error; // Nie rzucamy tutaj, aby FutureBuilder obsłużył stan błędu
-      });
-
-      // Aby FutureBuilder się przebudował, jeśli future już istnieje, ale chcemy odświeżyć
-      if (mounted && _accountsFuture != null) {
-        setState(() {});
-      }
-
-    } else {
-      print("DashboardScreen: User not authenticated or token missing, cannot load data.");
+    if (!authService.isAuthenticated || authService.token == null) {
+      print("DashboardScreen: User not authenticated or token missing.");
       if (mounted) {
         setState(() {
           _accountsFuture = Future.error(Exception("Użytkownik niezalogowany."));
           _userAccounts = [];
           _selectedAccount = null;
+          _recentTransactions = [];
+        });
+      }
+      return;
+    }
+
+    // Inicjujemy _accountsFuture tylko raz, jeśli jest null
+    if (_accountsFuture == null && mounted) {
+      final accountService = AccountService(
+        apiBaseUrl: _DashboardScreenState.AuthService_apiBaseUrl,
+        token: authService.token,
+      );
+      setState(() {
+        _accountsFuture = accountService.getAccounts();
+      });
+    }
+
+    try {
+      final accounts = await _accountsFuture; // Czekamy na załadowanie kont
+      if (mounted) {
+        BankAccount? newSelectedAccount = _selectedAccount;
+        if (accounts != null && accounts.isNotEmpty) {
+          _userAccounts = accounts;
+          // Ustaw/zaktualizuj wybrane konto
+          if (newSelectedAccount == null || !accounts.any((acc) => acc.id == newSelectedAccount!.id)) {
+            newSelectedAccount = accounts[0];
+          }
+        } else {
+          _userAccounts = [];
+          newSelectedAccount = null;
+        }
+
+        // Sprawdź, czy wybrane konto się zmieniło lub czy to pierwsze ładowanie
+        bool shouldLoadTransactions = (_selectedAccount?.id != newSelectedAccount?.id) || _recentTransactions.isEmpty;
+
+        setState(() {
+          _selectedAccount = newSelectedAccount;
+        });
+
+        if (newSelectedAccount != null && shouldLoadTransactions) {
+          await _loadRecentTransactionsForAccount(newSelectedAccount);
+        } else if (newSelectedAccount == null) {
+          if (mounted) setState(() => _recentTransactions = []);
+        }
+      }
+    } catch (error) {
+      print("DashboardScreen: Error loading account data: $error");
+      if (mounted) {
+        setState(() {
+          _userAccounts = [];
+          _selectedAccount = null;
+          _recentTransactions = [];
+          // Błąd zostanie obsłużony przez FutureBuilder dla salda
+        });
+      }
+    }
+  }
+
+  Future<void> _loadRecentTransactionsForAccount(BankAccount account) async {
+    if (!mounted) return;
+    setState(() { _isLoadingRecentTransactions = true; });
+    print("DEBUG: DashboardScreen - Loading recent transactions for account ID: ${account.id}");
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false); // Potrzebny token
+      final transactionService = TransactionService(
+        apiBaseUrl: AuthService.apiBaseUrl,
+        token: authService.token!,
+      );
+      final transactions = await transactionService.getTransactionHistory(
+        account.id,
+        perPage: 3, // Pobierz np. 3 ostatnie
+        page: 1,
+      );
+      if (mounted) {
+        setState(() {
+          _recentTransactions = transactions;
+          _isLoadingRecentTransactions = false;
+        });
+      }
+    } catch (error) {
+      print("DEBUG: DashboardScreen - Error loading recent transactions: $error");
+      if (mounted) {
+        setState(() {
+          _isLoadingRecentTransactions = false;
+          _recentTransactions = [];
+          // Można dodać SnackBar
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(content: Text('Błąd ładowania ostatnich transakcji.'), backgroundColor: Colors.orange),
+          // );
         });
       }
     }
   }
 
   static const String AuthService_apiBaseUrl = 'https://witelonapi.host358482.xce.pl/api';
+
+  String _formatCurrency(double amount, String currency) { // Pomocnicza funkcja
+    return '${amount.toStringAsFixed(2)} $currency';
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -111,21 +157,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              Provider.of<AuthService>(context, listen: false).logout();
-            },
+            onPressed: () => Provider.of<AuthService>(context, listen: false).logout(),
             tooltip: 'Wyloguj',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: (){
-              // Resetujemy future, aby wymusić ponowne załadowanie i przebudowanie FutureBuilder
               setState(() {
-                _accountsFuture = null;
+                _accountsFuture = null; // Resetuj future, aby wymusić ponowne ładowanie
                 _userAccounts = [];
                 _selectedAccount = null;
+                _recentTransactions = []; // Resetuj też ostatnie transakcje
               });
-              _loadAccountData();
+              _loadAccountDataAndRecentTransactions(); // Wywołaj główną metodę ładowania
             },
             tooltip: 'Odśwież dane',
           ),
@@ -136,13 +180,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
-              'Witaj, $userName!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            Text('Witaj, $userName!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
 
-            // Dropdown do wyboru konta
             if (_userAccounts.isNotEmpty) ...[
               DropdownButtonFormField<BankAccount>(
                 value: _selectedAccount,
@@ -156,21 +196,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 items: _userAccounts.map((BankAccount account) {
                   return DropdownMenuItem<BankAccount>(
                     value: account,
-                    child: Text(
-                      '${account.accountNumber} (${account.currency})',
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text('${account.accountNumber} (${account.currency})', overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (BankAccount? newValue) {
-                  setState(() {
-                    _selectedAccount = newValue;
-                    // Nie ma potrzeby ponownego wywoływania _loadAccountData(),
-                    // FutureBuilder dla salda powinien się przebudować,
-                    // jeśli _selectedAccount jest używany w jego builderze,
-                    // lub jeśli zmieniamy klucz FutureBuilder.
-                    // W tym przypadku, po prostu przebudowujemy UI.
-                  });
+                  if (newValue != null && mounted) {
+                    setState(() {
+                      _selectedAccount = newValue;
+                      _recentTransactions = []; // Wyczyść stare transakcje przed załadowaniem nowych
+                    });
+                    _loadRecentTransactionsForAccount(newValue); // Załaduj transakcje dla nowo wybranego konta
+                  }
                 },
                 isExpanded: true,
               ),
@@ -185,49 +221,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text( // Usunięto numer konta z tej etykiety
-                      'Saldo wybranego konta:',
-                      style: TextStyle(fontSize: 18, color: Colors.grey[700]),
-                    ),
+                    Text('Saldo wybranego konta:', style: TextStyle(fontSize: 18, color: Colors.grey[700])),
                     const SizedBox(height: 8),
-                    // FutureBuilder teraz głównie do obsługi stanu ładowania/błędu początkowego.
-                    // Wyświetlanie salda opiera się na _selectedAccount.
                     FutureBuilder<List<BankAccount>>(
-                      future: _accountsFuture, // Używamy tego samego future
+                      future: _accountsFuture,
                       builder: (ctx, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting && _selectedAccount == null) {
-                          return const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [CircularProgressIndicator()],
-                          );
-                        } else if (snapshot.hasError && _selectedAccount == null) {
-                          print("Błąd FutureBuilder salda: ${snapshot.error}");
-                          return Text(
-                            'Błąd: ${snapshot.error.toString().split(':').last.trim()}',
-                            style: const TextStyle(fontSize: 18, color: Colors.red),
-                            textAlign: TextAlign.center,
-                          );
-                        } else if (_selectedAccount != null) { // Jeśli mamy wybrane konto, wyświetlamy jego saldo
+                        // ... (logika wyświetlania salda bez zmian - bazuje na _selectedAccount)
+                        if (snapshot.connectionState == ConnectionState.waiting && _selectedAccount == null && _userAccounts.isEmpty) {
+                          return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator()]);
+                        } else if (snapshot.hasError && _selectedAccount == null && _userAccounts.isEmpty) {
+                          return Text('Błąd: ${snapshot.error.toString().split(':').last.trim()}', style: const TextStyle(fontSize: 18, color: Colors.red), textAlign: TextAlign.center);
+                        } else if (_selectedAccount != null) {
                           return Text(
                             '${_selectedAccount!.balance.toStringAsFixed(2)} ${_selectedAccount!.currency}',
                             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green),
-                            key: ValueKey('balanceDisplay_${_selectedAccount!.id}'), // Klucz zmienia się z kontem
+                            key: ValueKey('balanceDisplay_${_selectedAccount!.id}'),
                             textAlign: TextAlign.center,
                           );
                         } else if (_userAccounts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
-                          return const Text(
-                            'Brak przypisanych kont.',
-                            style: TextStyle(fontSize: 18, color: Colors.orange),
-                            textAlign: TextAlign.center,
-                          );
+                          return const Text('Brak przypisanych kont.', style: TextStyle(fontSize: 18, color: Colors.orange), textAlign: TextAlign.center);
                         }
-                        // Stan, gdy nie ma wybranego konta, ale lista nie jest pusta
-                        // lub jakiś inny nieoczekiwany stan
-                        return const Text(
-                          'Wybierz konto, aby zobaczyć saldo.',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        );
+                        return const Text('Wybierz konto, aby zobaczyć saldo.', style: TextStyle(fontSize: 18, color: Colors.grey), textAlign: TextAlign.center);
                       },
                     ),
                   ],
@@ -235,76 +249,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Szybkie Akcje',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Szybkie Akcje', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 10.0,
-              runSpacing: 10.0,
+            Wrap( /* ... (przyciski Szybkich Akcji bez zmian, ale nawigacja do TransferScreen i TransactionHistoryScreen używa _selectedAccount) ... */
+              spacing: 10.0, runSpacing: 10.0,
               children: [
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.send),
-                  label: const Text('Nowy Przelew'),
-                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () async { // Wyłącz, jeśli nie ma wybranego konta a są jakieś do wyboru
+                  icon: const Icon(Icons.send), label: const Text('Nowy Przelew'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () async {
                     if (_userAccounts.isEmpty && _selectedAccount == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Brak kont do wykonania przelewu.')),
-                      );
-                      return;
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brak kont do wykonania przelewu.'))); return;
                     }
-                    final result = await Navigator.of(context).pushNamed(
-                      TransferScreen.routeName,
-                      // Można przekazać _selectedAccount do TransferScreen,
-                      // aby domyślnie było wybrane jako konto nadawcy,
-                      // ale TransferScreen i tak ładuje listę kont.
-                    );
-                    if (result == true && mounted) {
-                      print("DEBUG: DashboardScreen - Transfer successful, refreshing account data...");
-                      _loadAccountData();
-                    }
+                    final result = await Navigator.of(context).pushNamed(TransferScreen.routeName);
+                    if (result == true && mounted) { _loadAccountDataAndRecentTransactions(); }
                   },
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.history),
-                  label: const Text('Historia Transakcji'),
-                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () { // Wyłącz, jeśli nie ma wybranego konta
-                    if (_selectedAccount != null) {
-                      Navigator.of(context).pushNamed(
-                        TransactionHistoryScreen.routeName,
-                        arguments: _selectedAccount!,
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Wybierz konto, aby zobaczyć historię lub brak kont.')),
-                      );
-                    }
+                  icon: const Icon(Icons.history), label: const Text('Historia Transakcji'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () {
+                    if (_selectedAccount != null) { Navigator.of(context).pushNamed(TransactionHistoryScreen.routeName, arguments: _selectedAccount!); }
+                    else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz konto, aby zobaczyć historię lub brak kont.'))); }
                   },
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.credit_card),
-                  label: const Text('Zarządzaj Kartami'),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Funkcja "Zarządzaj Kartami" wkrótce! (WBK-12)')),
-                    );
+                  icon: const Icon(Icons.credit_card), label: const Text('Zarządzaj Kartami'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () {
+                    if (_selectedAccount != null) { Navigator.of(context).pushNamed(ManageCardsScreen.routeName, arguments: _selectedAccount!); }
+                    else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz konto, aby zarządzać kartami lub brak kont.'))); }
                   },
                 ),
               ],
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Ostatnie Transakcje', // TODO: Też powinny być dla wybranego konta
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Ostatnie Transakcje', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Expanded(
-              child: ListView(
-                children: const [
-                  ListTile(leading: Icon(Icons.arrow_downward, color: Colors.green), title: Text('Wynagrodzenie'), trailing: Text('+ 5,000.00 PLN')),
-                  ListTile(leading: Icon(Icons.arrow_upward, color: Colors.red), title: Text('Zakupy spożywcze'), trailing: Text('- 150.25 PLN')),
-                ],
+              child: _isLoadingRecentTransactions
+                  ? const Center(child: CircularProgressIndicator())
+                  : _recentTransactions.isEmpty
+                  ? const Center(child: Text('Brak ostatnich transakcji.'))
+                  : ListView.builder(
+                itemCount: _recentTransactions.length,
+                itemBuilder: (context, index) {
+                  final transaction = _recentTransactions[index];
+                  final bool isIncoming = transaction.isIncoming;
+                  return ListTile(
+                    leading: Icon(
+                      isIncoming ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                      color: isIncoming ? Colors.green.shade700 : Colors.red.shade700,
+                    ),
+                    title: Text(transaction.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    subtitle: Text(
+                        isIncoming
+                            ? (transaction.senderAccountNumber != null && transaction.senderAccountNumber!.isNotEmpty
+                            ? 'Od: ${transaction.senderAccountNumber}'
+                            : transaction.recipientName.isNotEmpty ? 'Od: ${transaction.recipientName}' : transaction.transactionType)
+                            : 'Do: ${transaction.recipientName}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis
+                    ),
+                    trailing: Text(
+                      '${transaction.amount.toStringAsFixed(2)} ${transaction.currency}', // Znak +/- powinien być w amount lub w isIncoming
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isIncoming ? Colors.green.shade700 : Colors.red.shade700,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
