@@ -7,8 +7,10 @@ import 'package:mobile_witelon_bank/screens/forgot_password_screen.dart';
 import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
 import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
-import 'package:mobile_witelon_bank/models/bank_account.dart';
 import 'package:mobile_witelon_bank/screens/manage_standing_orders_screen.dart';
+import 'package:mobile_witelon_bank/screens/edit_standing_order_screen.dart';
+import 'package:mobile_witelon_bank/models/bank_account.dart';
+import 'package:mobile_witelon_bank/models/standing_order.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,6 +42,8 @@ class MyApp extends StatelessWidget {
           ManageStandingOrdersScreen.routeName: (ctx) => const ManageStandingOrdersScreen(),
         },
         onGenerateRoute: (settings) {
+          print("DEBUG: Navigating to route: ${settings.name} with arguments: ${settings.arguments}");
+
           if (settings.name == TransactionHistoryScreen.routeName) {
             final args = settings.arguments;
             if (args is BankAccount) {
@@ -51,7 +55,9 @@ class MyApp extends StatelessWidget {
             }
             print("Błąd nawigacji do TransactionHistoryScreen: Nieprawidłowe argumenty.");
             return _errorRoute("Błąd: Nie udało się załadować historii transakcji z powodu braku danych konta.");
-          } else if (settings.name == ManageCardsScreen.routeName) {
+          }
+
+          else if (settings.name == ManageCardsScreen.routeName) {
             final args = settings.arguments;
             if (args is BankAccount) {
               return MaterialPageRoute(
@@ -63,7 +69,17 @@ class MyApp extends StatelessWidget {
             print("Błąd nawigacji do ManageCardsScreen: Nieprawidłowe argumenty.");
             return _errorRoute("Błąd: Nie udało się załadować zarządzania kartami z powodu braku danych konta.");
           }
-          return null;
+
+          else if (settings.name == EditStandingOrderScreen.routeName) {
+            final StandingOrder? existingOrder = settings.arguments as StandingOrder?;
+            return MaterialPageRoute(
+              builder: (context) {
+                return EditStandingOrderScreen(existingOrder: existingOrder);
+              },
+            );
+          }
+          print("OSTRZEŻENIE: Nie znaleziono generatora dla trasy ${settings.name}");
+          return _errorRoute("Nie znaleziono strony: ${settings.name}");
         },
       ),
     );

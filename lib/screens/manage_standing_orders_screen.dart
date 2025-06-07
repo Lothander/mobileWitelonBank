@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_witelon_bank/models/standing_order.dart';
 import 'package:mobile_witelon_bank/services/auth_service.dart';
 import 'package:mobile_witelon_bank/services/standing_order_service.dart';
+import 'package:mobile_witelon_bank/screens/edit_standing_order_screen.dart';
 
 class ManageStandingOrdersScreen extends StatefulWidget {
   static const routeName = '/manage-standing-orders';
@@ -59,20 +60,20 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
     });
   }
 
-  Future<void> _deleteStandingOrder(int orderId) async {
+  Future<void> _deactivateStandingOrder(int orderId) async {
     if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Potwierdzenie'),
-        content: const Text('Czy na pewno chcesz dezaktywować to zlecenie stałe?'),
+        content: const Text('Czy na pewno chcesz usunąć to zlecenie stałe?'),
         actions: <Widget>[
           TextButton(
             child: const Text('Anuluj'),
             onPressed: () => Navigator.of(ctx).pop(false),
           ),
           TextButton(
-            child: const Text('Dezaktywuj', style: TextStyle(color: Colors.red)),
+            child: const Text('Usuń', style: TextStyle(color: Colors.orange)),
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
         ],
@@ -84,12 +85,12 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
       try {
         await _getStandingOrderService().deleteStandingOrder(orderId);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Zlecenie stałe dezaktywowane pomyślnie.'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Zlecenie stałe zostało usunięte.'), backgroundColor: Colors.green),
         );
         _loadStandingOrders();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Błąd dezaktywowania zlecenia: ${e.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Błąd podczas usuwania zlecenia: ${e.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
         );
       } finally {
         if (mounted) {
@@ -99,12 +100,20 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
     }
   }
 
-  void _navigateToEditStandingOrderScreen([StandingOrder? order]) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Funkcjonalność ${order == null ? "dodawania" : "edycji"} zlecenia wkrótce!')),
+  void _navigateToEditStandingOrderScreen([StandingOrder? order]) async {
+    print("DEBUG: Navigating to EditStandingOrderScreen. Editing order: ${order?.id}");
+    final result = await Navigator.of(context).pushNamed(
+      EditStandingOrderScreen.routeName,
+      arguments: order,
     );
-  }
 
+    if (result == true && mounted) {
+      print("DEBUG: Returned from EditStandingOrderScreen with success, refreshing list.");
+      _loadStandingOrders();
+    } else {
+      print("DEBUG: Returned from EditStandingOrderScreen without success signal (result: $result).");
+    }
+  }
 
   String _formatDate(DateTime? date) {
     if (date == null) return 'Brak';
@@ -133,8 +142,9 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
           FutureBuilder<List<StandingOrder>>(
             future: _standingOrdersFuture,
             builder: (ctx, snapshot) {
+              Widget content;
               if (_standingOrders.isNotEmpty) {
-                return ListView.builder(
+                content = ListView.builder(
                   itemCount: _standingOrders.length,
                   itemBuilder: (ctx, index) {
                     final order = _standingOrders[index];
@@ -163,7 +173,7 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
                             if (value == 'edit') {
                               _navigateToEditStandingOrderScreen(order);
                             } else if (value == 'deactivate') {
-                              _deleteStandingOrder(order.id);
+                              _deactivateStandingOrder(order.id);
                             }
                           },
                           itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
@@ -173,7 +183,7 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
                             ),
                             const PopupMenuItem<String>(
                               value: 'deactivate',
-                              child: Text('Dezaktywuj', style: TextStyle(color: Colors.red)),
+                              child: Text('Usuń', style: TextStyle(color: Colors.orange)),
                             ),
                           ],
                         ),
@@ -183,9 +193,9 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
                   },
                 );
               } else if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                content = const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
-                return Center(
+                content = Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
@@ -196,7 +206,7 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
                   ),
                 );
               } else {
-                return Center(
+                content = Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -211,6 +221,7 @@ class _ManageStandingOrdersScreenState extends State<ManageStandingOrdersScreen>
                   ),
                 );
               }
+              return content;
             },
           ),
           if (_isLoadingAction)
