@@ -9,8 +9,11 @@ import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_standing_orders_screen.dart';
 import 'package:mobile_witelon_bank/screens/edit_standing_order_screen.dart';
+import 'package:mobile_witelon_bank/screens/edit_recipient_screen.dart';
+import 'package:mobile_witelon_bank/screens/manage_recipients_screen.dart';
 import 'package:mobile_witelon_bank/models/bank_account.dart';
 import 'package:mobile_witelon_bank/models/standing_order.dart';
+import 'package:mobile_witelon_bank/models/saved_recipient.dart';
 
 void main() {
   runApp(const MyApp());
@@ -31,54 +34,57 @@ class MyApp extends StatelessWidget {
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         home: Consumer<AuthService>(
-          builder: (ctx, authService, _) =>
-          authService.isAuthenticated ? const DashboardScreen() : const LoginScreen(),
+          builder: (ctx, authService, _) => authService.isAuthenticated
+              ? const DashboardScreen()
+              : const LoginScreen(),
         ),
         routes: {
           LoginScreen.routeName: (ctx) => const LoginScreen(),
           DashboardScreen.routeName: (ctx) => const DashboardScreen(),
           ForgotPasswordScreen.routeName: (ctx) => const ForgotPasswordScreen(),
           TransferScreen.routeName: (ctx) => const TransferScreen(),
-          ManageStandingOrdersScreen.routeName: (ctx) => const ManageStandingOrdersScreen(),
+          ManageStandingOrdersScreen.routeName: (ctx) =>
+          const ManageStandingOrdersScreen(),
+          ManageRecipientsScreen.routeName: (ctx) =>
+          const ManageRecipientsScreen(),
         },
         onGenerateRoute: (settings) {
-          print("DEBUG: Navigating to route: ${settings.name} with arguments: ${settings.arguments}");
-
           if (settings.name == TransactionHistoryScreen.routeName) {
             final args = settings.arguments;
             if (args is BankAccount) {
               return MaterialPageRoute(
-                builder: (context) {
-                  return TransactionHistoryScreen(account: args);
-                },
-              );
+                  builder: (context) => TransactionHistoryScreen(account: args));
             }
-            print("Błąd nawigacji do TransactionHistoryScreen: Nieprawidłowe argumenty.");
-            return _errorRoute("Błąd: Nie udało się załadować historii transakcji z powodu braku danych konta.");
+            return _errorRoute(
+                "Błąd: Nieprawidłowe dane konta dla historii transakcji.");
           }
 
-          else if (settings.name == ManageCardsScreen.routeName) {
+          if (settings.name == ManageCardsScreen.routeName) {
             final args = settings.arguments;
             if (args is BankAccount) {
               return MaterialPageRoute(
-                builder: (context) {
-                  return ManageCardsScreen(account: args);
-                },
-              );
+                  builder: (context) => ManageCardsScreen(account: args));
             }
-            print("Błąd nawigacji do ManageCardsScreen: Nieprawidłowe argumenty.");
-            return _errorRoute("Błąd: Nie udało się załadować zarządzania kartami z powodu braku danych konta.");
+            return _errorRoute(
+                "Błąd: Nieprawidłowe dane konta dla zarządzania kartami.");
           }
 
-          else if (settings.name == EditStandingOrderScreen.routeName) {
-            final StandingOrder? existingOrder = settings.arguments as StandingOrder?;
+          if (settings.name == EditStandingOrderScreen.routeName) {
+            final StandingOrder? existingOrder =
+            settings.arguments as StandingOrder?;
             return MaterialPageRoute(
-              builder: (context) {
-                return EditStandingOrderScreen(existingOrder: existingOrder);
-              },
-            );
+                builder: (context) =>
+                    EditStandingOrderScreen(existingOrder: existingOrder));
           }
-          print("OSTRZEŻENIE: Nie znaleziono generatora dla trasy ${settings.name}");
+
+          if (settings.name == EditRecipientScreen.routeName) {
+            final SavedRecipient? existingRecipient =
+            settings.arguments as SavedRecipient?;
+            return MaterialPageRoute(
+                builder: (context) =>
+                    EditRecipientScreen(existingRecipient: existingRecipient));
+          }
+
           return _errorRoute("Nie znaleziono strony: ${settings.name}");
         },
       ),
@@ -92,7 +98,9 @@ class MyApp extends StatelessWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red, fontSize: 16)),
+            child: Text(message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 16)),
           ),
         ),
       ),

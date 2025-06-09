@@ -9,6 +9,7 @@ import 'package:mobile_witelon_bank/screens/transaction_history_screen.dart';
 import 'package:mobile_witelon_bank/screens/transfer_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_cards_screen.dart';
 import 'package:mobile_witelon_bank/screens/manage_standing_orders_screen.dart';
+import 'package:mobile_witelon_bank/screens/manage_recipients_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -273,6 +274,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   label: const Text('Zlecenia Stałe'),
                   onPressed: () {
                     Navigator.of(context).pushNamed(ManageStandingOrdersScreen.routeName);
+                  },
+                ),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.people_alt_outlined),
+                  label: const Text('Zapisani Odbiorcy'),
+                  onPressed: () {
+                    Navigator.of(context).pushNamed(ManageRecipientsScreen.routeName);
                   },
                 ),
               ],
