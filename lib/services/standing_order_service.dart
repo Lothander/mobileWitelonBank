@@ -14,25 +14,25 @@ class StandingOrderService {
   Future<List<StandingOrder>> getStandingOrders() async {
     if (_token == null) throw Exception('Brak autoryzacji.');
     final uri = Uri.parse('$_apiBaseUrl/zlecenia-stale');
-    print("DEBUG: StandingOrderService - GET $uri");
 
     try {
       final response = await http.get(uri, headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $_token',
       }).timeout(const Duration(seconds: 15));
-      print("DEBUG: StandingOrderService.getStandingOrders - Status: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> responseData =
+        jsonDecode(response.body) as List<dynamic>;
         return responseData
-            .map((orderJson) => StandingOrder.fromJson(orderJson as Map<String, dynamic>))
+            .map((orderJson) =>
+            StandingOrder.fromJson(orderJson as Map<String, dynamic>))
             .toList();
       } else {
-        throw Exception('Nie udało się pobrać zleceń stałych. Kod: ${response.statusCode}');
+        throw Exception(
+            'Nie udało się pobrać zleceń stałych. Kod: ${response.statusCode}');
       }
-    } catch (e, s) {
-      print("DEBUG: StandingOrderService.getStandingOrders - Error: $e, Stack: $s");
+    } catch (e) {
       throw Exception('Błąd pobierania zleceń stałych: ${e.toString()}');
     }
   }
@@ -41,7 +41,6 @@ class StandingOrderService {
     if (_token == null) throw Exception('Brak autoryzacji.');
     final uri = Uri.parse('$_apiBaseUrl/zlecenia-stale');
     final body = jsonEncode(orderData.toJsonForCreate());
-    print("DEBUG: StandingOrderService - POST $uri with body $body");
 
     try {
       final response = await http.post(uri, headers: {
@@ -49,25 +48,31 @@ class StandingOrderService {
         'Accept': 'application/json',
         'Authorization': 'Bearer $_token',
       }, body: body).timeout(const Duration(seconds: 15));
-      print("DEBUG: StandingOrderService.createStandingOrder - Status: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 201) {
-        return StandingOrder.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+        return StandingOrder.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>);
       } else {
-        // TODO: Lepsza obsługa błędów walidacji z API (jeśli zwraca szczegóły)
-        throw Exception('Nie udało się utworzyć zlecenia stałego. Kod: ${response.statusCode}. Body: ${response.body}');
+        String errorMessage = 'Nie udało się utworzyć zlecenia stałego.';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic> &&
+              errorData.containsKey('message')) {
+            errorMessage = errorData['message'] as String;
+          }
+        } catch (_) {}
+        throw Exception('$errorMessage Kod: ${response.statusCode}');
       }
-    } catch (e, s) {
-      print("DEBUG: StandingOrderService.createStandingOrder - Error: $e, Stack: $s");
+    } catch (e) {
       throw Exception('Błąd tworzenia zlecenia stałego: ${e.toString()}');
     }
   }
 
-  Future<StandingOrder> updateStandingOrder(int orderId, StandingOrder orderData) async {
+  Future<StandingOrder> updateStandingOrder(
+      int orderId, StandingOrder orderData) async {
     if (_token == null) throw Exception('Brak autoryzacji.');
     final uri = Uri.parse('$_apiBaseUrl/zlecenia-stale/$orderId');
     final body = jsonEncode(orderData.toJsonForUpdate());
-    print("DEBUG: StandingOrderService - PUT $uri with body $body");
 
     try {
       final response = await http.put(uri, headers: {
@@ -75,16 +80,22 @@ class StandingOrderService {
         'Accept': 'application/json',
         'Authorization': 'Bearer $_token',
       }, body: body).timeout(const Duration(seconds: 15));
-      print("DEBUG: StandingOrderService.updateStandingOrder - Status: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200) {
-        return StandingOrder.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+        return StandingOrder.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>);
       } else {
-        // TODO: Lepsza obsługa błędów
-        throw Exception('Nie udało się zaktualizować zlecenia stałego. Kod: ${response.statusCode}. Body: ${response.body}');
+        String errorMessage = 'Nie udało się zaktualizować zlecenia stałego.';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic> &&
+              errorData.containsKey('message')) {
+            errorMessage = errorData['message'] as String;
+          }
+        } catch (_) {}
+        throw Exception('$errorMessage Kod: ${response.statusCode}');
       }
-    } catch (e, s) {
-      print("DEBUG: StandingOrderService.updateStandingOrder - Error: $e, Stack: $s");
+    } catch (e) {
       throw Exception('Błąd aktualizacji zlecenia stałego: ${e.toString()}');
     }
   }
@@ -92,24 +103,29 @@ class StandingOrderService {
   Future<void> deleteStandingOrder(int orderId) async {
     if (_token == null) throw Exception('Brak autoryzacji.');
     final uri = Uri.parse('$_apiBaseUrl/zlecenia-stale/$orderId');
-    print("DEBUG: StandingOrderService - DELETE $uri");
 
     try {
       final response = await http.delete(uri, headers: {
         'Accept': 'application/json',
         'Authorization': 'Bearer $_token',
       }).timeout(const Duration(seconds: 15));
-      print("DEBUG: StandingOrderService.deleteStandingOrder - Status: ${response.statusCode}, Body: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 204) {
         return;
       } else {
-        // TODO: Lepsza obsługa błędów
-        throw Exception('Nie udało się usunąć/dezaktywować zlecenia stałego. Kod: ${response.statusCode}. Body: ${response.body}');
+        String errorMessage = 'Nie udało się usunąć zlecenia stałego.';
+        try {
+          final errorData = jsonDecode(response.body);
+          if (errorData is Map<String, dynamic> &&
+              errorData.containsKey('message')) {
+            errorMessage = errorData['message'] as String;
+          }
+        } catch (_) {}
+        throw Exception('$errorMessage Kod: ${response.statusCode}');
       }
-    } catch (e, s) {
-      print("DEBUG: StandingOrderService.deleteStandingOrder - Error: $e, Stack: $s");
-      throw Exception('Błąd usuwania/dezaktywacji zlecenia stałego: ${e.toString()}');
+    } catch (e) {
+      throw Exception(
+          'Błąd usuwania/dezaktywacji zlecenia stałego: ${e.toString()}');
     }
   }
 }

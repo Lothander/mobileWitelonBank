@@ -56,7 +56,6 @@ class LoginStep1Result {
   LoginStep1Result({required this.status, this.message, this.email});
 }
 
-
 class AuthService with ChangeNotifier {
   User? _currentUser;
   String? _token;
@@ -79,16 +78,17 @@ class AuthService with ChangeNotifier {
     if (storedToken != null && storedUserJson != null) {
       try {
         _token = storedToken;
-        _currentUser = User.fromJson(jsonDecode(storedUserJson) as Map<String, dynamic>);
+        _currentUser =
+            User.fromJson(jsonDecode(storedUserJson) as Map<String, dynamic>);
         notifyListeners();
       } catch (e) {
-        print("Błąd podczas automatycznego logowania: $e");
         await _clearAuthData();
       }
     }
   }
 
-  Future<LoginStep1Result> loginStep1Request2FACode(String email, String password) async {
+  Future<LoginStep1Result> loginStep1Request2FACode(
+      String email, String password) async {
     final url = Uri.parse('$apiBaseUrl/login');
     try {
       final response = await http.post(
@@ -108,27 +108,41 @@ class AuthService with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final responseEmail = responseData['email'] as String?;
-        return LoginStep1Result(status: LoginStep1ResultStatus.success, message: message, email: responseEmail ?? email);
+        return LoginStep1Result(
+            status: LoginStep1ResultStatus.success,
+            message: message,
+            email: responseEmail ?? email);
       } else if (response.statusCode == 401) {
-        return LoginStep1Result(status: LoginStep1ResultStatus.invalidCredentials, message: message ?? 'Nieprawidłowy email lub hasło.');
+        return LoginStep1Result(
+            status: LoginStep1ResultStatus.invalidCredentials,
+            message: message ?? 'Nieprawidłowy email lub hasło.');
       } else if (response.statusCode == 422) {
-        return LoginStep1Result(status: LoginStep1ResultStatus.validationError, message: message ?? 'Błąd walidacji danych.');
+        return LoginStep1Result(
+            status: LoginStep1ResultStatus.validationError,
+            message: message ?? 'Błąd walidacji danych.');
       } else if (response.statusCode == 500) {
-        return LoginStep1Result(status: LoginStep1ResultStatus.serverError, message: message ?? 'Błąd serwera. Spróbuj ponownie później.');
+        return LoginStep1Result(
+            status: LoginStep1ResultStatus.serverError,
+            message: message ?? 'Błąd serwera. Spróbuj ponownie później.');
       } else {
-        print("AuthService.loginStep1 - Nieoczekiwana odpowiedź: ${response.statusCode}, Body: ${response.body}");
-        return LoginStep1Result(status: LoginStep1ResultStatus.networkError, message: 'Nieoczekiwany błąd: ${response.statusCode}');
+        return LoginStep1Result(
+            status: LoginStep1ResultStatus.networkError,
+            message: 'Nieoczekiwany błąd: ${response.statusCode}');
       }
-    } on TimeoutException catch (e) {
-      print('Błąd w loginStep1: TimeoutException - $e');
-      return LoginStep1Result(status: LoginStep1ResultStatus.networkError, message: 'Serwer nie odpowiedział w wyznaczonym czasie. Sprawdź połączenie.');
+    } on TimeoutException {
+      return LoginStep1Result(
+          status: LoginStep1ResultStatus.networkError,
+          message:
+          'Serwer nie odpowiedział w wyznaczonym czasie. Sprawdź połączenie.');
     } catch (error) {
-      print('Błąd sieciowy w loginStep1: $error');
-      return LoginStep1Result(status: LoginStep1ResultStatus.networkError, message: 'Błąd połączenia. Sprawdź internet.');
+      return LoginStep1Result(
+          status: LoginStep1ResultStatus.networkError,
+          message: 'Błąd połączenia. Sprawdź internet.');
     }
   }
 
-  Future<bool> loginStep2Verify2FACode(String email, String verificationCode) async {
+  Future<bool> loginStep2Verify2FACode(
+      String email, String verificationCode) async {
     final url = Uri.parse('$apiBaseUrl/2fa');
     final requestBody = {
       'email': email,
@@ -147,33 +161,29 @@ class AuthService with ChangeNotifier {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        if (responseData.containsKey('token') && responseData.containsKey('user')) {
+        if (responseData.containsKey('token') &&
+            responseData.containsKey('user')) {
           _token = responseData['token'] as String?;
           final userData = responseData['user'] as Map<String, dynamic>?;
 
           if (_token != null && userData != null) {
             _currentUser = User.fromJson(userData);
             await _storage.write(key: 'authToken', value: _token);
-            await _storage.write(key: 'currentUser', value: jsonEncode(_currentUser!.toJson()));
+            await _storage.write(
+                key: 'currentUser', value: jsonEncode(_currentUser!.toJson()));
             notifyListeners();
             return true;
           }
         }
-        print('AuthService.loginStep2 - Odpowiedź 2FA OK (200), ale brak tokenu/usera: ${response.body}');
         await _clearAuthData();
         return false;
       } else {
-        final responseData = jsonDecode(response.body) as Map<String, dynamic>;
-        final message = responseData['message'] as String?;
-        print('AuthService.loginStep2 - Błąd weryfikacji 2FA: ${response.statusCode} - $message. Body: ${response.body}');
         await _clearAuthData();
         return false;
       }
-    } on TimeoutException catch (e) {
-      print('Błąd w loginStep2: TimeoutException - $e');
+    } on TimeoutException {
       return false;
     } catch (error) {
-      print('Błąd sieciowy w loginStep2: $error');
       await _clearAuthData();
       return false;
     }
@@ -183,7 +193,7 @@ class AuthService with ChangeNotifier {
     if (_token != null) {
       final url = Uri.parse('$apiBaseUrl/logout');
       try {
-        final response = await http.post(
+        await http.post(
           url,
           headers: {
             'Content-Type': 'application/json; charset=UTF-8',
@@ -191,12 +201,9 @@ class AuthService with ChangeNotifier {
             'Authorization': 'Bearer $_token',
           },
         ).timeout(const Duration(seconds: 10));
-        // Logowanie odpowiedzi wylogowania
-        print("AuthService.logout - Odpowiedź: ${response.statusCode}, Body: ${response.body}");
-      } on TimeoutException catch (e) {
-        print('AuthService.logout - Błąd (Timeout): $e');
       } catch (error) {
-        print('AuthService.logout - Błąd API: $error');
+        // Ignorujemy błędy przy wylogowywaniu,
+        // ponieważ dane lokalne zostaną i tak usunięte.
       }
     }
     await _clearAuthData();
@@ -220,27 +227,25 @@ class AuthService with ChangeNotifier {
           'Accept': 'application/json',
         },
         body: jsonEncode({'email': email}),
-      ).timeout(const Duration(seconds:15));
+      ).timeout(const Duration(seconds: 15));
 
       final responseData = jsonDecode(response.body);
       final message = responseData['message'] as String?;
 
-      print("AuthService.requestPasswordReset - Odpowiedź: ${response.statusCode}, Body: ${response.body}");
-
       if (response.statusCode == 200) {
-        return message ?? 'Jeśli użytkownik istnieje, link do resetowania hasła został wysłany.';
-      } else if (response.statusCode == 422){
+        return message ??
+            'Jeśli użytkownik istnieje, link do resetowania hasła został wysłany.';
+      } else if (response.statusCode == 422) {
         return message ?? 'Podany adres email jest nieprawidłowy.';
-      } else if (response.statusCode == 500){
+      } else if (response.statusCode == 500) {
         return message ?? 'Wystąpił błąd serwera. Spróbuj ponownie później.';
       } else {
-        return message ?? 'Nie udało się wysłać żądania resetowania hasła. Kod: ${response.statusCode}';
+        return message ??
+            'Nie udało się wysłać żądania resetowania hasła. Kod: ${response.statusCode}';
       }
-    } on TimeoutException catch (e) {
-      print('Błąd żądania resetowania hasła (Timeout): $e');
+    } on TimeoutException {
       return 'Serwer nie odpowiedział w wyznaczonym czasie. Spróbuj ponownie.';
     } catch (error) {
-      print('Błąd żądania resetowania hasła: $error');
       return 'Wystąpił błąd sieciowy. Spróbuj ponownie.';
     }
   }

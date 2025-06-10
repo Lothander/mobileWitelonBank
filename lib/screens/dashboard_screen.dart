@@ -38,7 +38,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadAccountDataAndRecentTransactions() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     if (!authService.isAuthenticated || authService.token == null) {
-      print("DashboardScreen: User not authenticated or token missing.");
       if (mounted) {
         setState(() {
           _accountsFuture = Future.error(Exception("Użytkownik niezalogowany."));
@@ -52,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (_accountsFuture == null && mounted) {
       final accountService = AccountService(
-        apiBaseUrl: _DashboardScreenState.AuthService_apiBaseUrl,
+        apiBaseUrl: AuthService.apiBaseUrl,
         token: authService.token,
       );
       setState(() {
@@ -66,7 +65,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         BankAccount? newSelectedAccount = _selectedAccount;
         if (accounts != null && accounts.isNotEmpty) {
           _userAccounts = accounts;
-          if (newSelectedAccount == null || !accounts.any((acc) => acc.id == newSelectedAccount!.id)) {
+          if (newSelectedAccount == null ||
+              !accounts.any((acc) => acc.id == newSelectedAccount!.id)) {
             newSelectedAccount = accounts[0];
           }
         } else {
@@ -74,7 +74,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           newSelectedAccount = null;
         }
 
-        bool shouldLoadTransactions = (_selectedAccount?.id != newSelectedAccount?.id) || _recentTransactions.isEmpty;
+        bool shouldLoadTransactions =
+            (_selectedAccount?.id != newSelectedAccount?.id) ||
+                _recentTransactions.isEmpty;
 
         setState(() {
           _selectedAccount = newSelectedAccount;
@@ -87,7 +89,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
     } catch (error) {
-      print("DashboardScreen: Error loading account data: $error");
       if (mounted) {
         setState(() {
           _userAccounts = [];
@@ -100,8 +101,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadRecentTransactionsForAccount(BankAccount account) async {
     if (!mounted) return;
-    setState(() { _isLoadingRecentTransactions = true; });
-    print("DEBUG: DashboardScreen - Loading recent transactions for account ID: ${account.id}");
+    setState(() {
+      _isLoadingRecentTransactions = true;
+    });
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
@@ -121,7 +123,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     } catch (error) {
-      print("DEBUG: DashboardScreen - Error loading recent transactions: $error");
       if (mounted) {
         setState(() {
           _isLoadingRecentTransactions = false;
@@ -130,13 +131,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
   }
-
-  static const String AuthService_apiBaseUrl = 'https://witelonapi.host358482.xce.pl/api';
-
-  String _formatCurrency(double amount, String currency) {
-    return '${amount.toStringAsFixed(2)} $currency';
-  }
-
 
   @override
   Widget build(BuildContext context) {
@@ -149,12 +143,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => Provider.of<AuthService>(context, listen: false).logout(),
+            onPressed: () =>
+                Provider.of<AuthService>(context, listen: false).logout(),
             tooltip: 'Wyloguj',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: (){
+            onPressed: () {
               setState(() {
                 _accountsFuture = null;
                 _userAccounts = [];
@@ -172,23 +167,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text('Witaj, $userName!', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            Text('Witaj, $userName!',
+                style:
+                const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
-
             if (_userAccounts.isNotEmpty) ...[
               DropdownButtonFormField<BankAccount>(
                 value: _selectedAccount,
                 decoration: InputDecoration(
                   labelText: 'Wybierz konto',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                   filled: true,
                   fillColor: Colors.white,
-                  prefixIcon: Icon(Icons.account_balance_wallet, color: Theme.of(context).colorScheme.primary),
+                  prefixIcon: Icon(Icons.account_balance_wallet,
+                      color: Theme.of(context).colorScheme.primary),
                 ),
                 items: _userAccounts.map((BankAccount account) {
                   return DropdownMenuItem<BankAccount>(
                     value: account,
-                    child: Text('${account.accountNumber} (${account.currency})', overflow: TextOverflow.ellipsis),
+                    child: Text('${account.accountNumber} (${account.currency})',
+                        overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (BankAccount? newValue) {
@@ -204,35 +203,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
             ],
-
             Card(
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Saldo wybranego konta:', style: TextStyle(fontSize: 18, color: Colors.grey[700])),
+                    Text('Saldo wybranego konta:',
+                        style:
+                        TextStyle(fontSize: 18, color: Colors.grey[700])),
                     const SizedBox(height: 8),
                     FutureBuilder<List<BankAccount>>(
                       future: _accountsFuture,
                       builder: (ctx, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting && _selectedAccount == null && _userAccounts.isEmpty) {
-                          return const Row(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator()]);
-                        } else if (snapshot.hasError && _selectedAccount == null && _userAccounts.isEmpty) {
-                          return Text('Błąd: ${snapshot.error.toString().split(':').last.trim()}', style: const TextStyle(fontSize: 18, color: Colors.red), textAlign: TextAlign.center);
+                        if (snapshot.connectionState == ConnectionState.waiting &&
+                            _selectedAccount == null &&
+                            _userAccounts.isEmpty) {
+                          return const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [CircularProgressIndicator()]);
+                        } else if (snapshot.hasError &&
+                            _selectedAccount == null &&
+                            _userAccounts.isEmpty) {
+                          return Text(
+                              'Błąd: ${snapshot.error.toString().split(':').last.trim()}',
+                              style: const TextStyle(
+                                  fontSize: 18, color: Colors.red),
+                              textAlign: TextAlign.center);
                         } else if (_selectedAccount != null) {
                           return Text(
                             '${_selectedAccount!.balance.toStringAsFixed(2)} ${_selectedAccount!.currency}',
-                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.green),
+                            style: const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green),
                             key: ValueKey('balanceDisplay_${_selectedAccount!.id}'),
                             textAlign: TextAlign.center,
                           );
-                        } else if (_userAccounts.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
-                          return const Text('Brak przypisanych kont.', style: TextStyle(fontSize: 18, color: Colors.orange), textAlign: TextAlign.center);
+                        } else if (_userAccounts.isEmpty &&
+                            snapshot.connectionState !=
+                                ConnectionState.waiting) {
+                          return const Text('Brak przypisanych kont.',
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.orange),
+                              textAlign: TextAlign.center);
                         }
-                        return const Text('Wybierz konto, aby zobaczyć saldo.', style: TextStyle(fontSize: 18, color: Colors.grey), textAlign: TextAlign.center);
+                        return const Text('Wybierz konto, aby zobaczyć saldo.',
+                            style:
+                            TextStyle(fontSize: 18, color: Colors.grey),
+                            textAlign: TextAlign.center);
                       },
                     ),
                   ],
@@ -240,53 +262,91 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text('Szybkie Akcje', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Szybkie Akcje',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Wrap(
-              spacing: 10.0, runSpacing: 10.0,
+              spacing: 10.0,
+              runSpacing: 10.0,
               children: [
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.send), label: const Text('Nowy Przelew'),
-                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () async {
-                    if (_userAccounts.isEmpty && _selectedAccount == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Brak kont do wykonania przelewu.'))); return;
+                  icon: const Icon(Icons.send),
+                  label: const Text('Nowy Przelew'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty)
+                      ? null
+                      : () async {
+                    if (_userAccounts.isEmpty &&
+                        _selectedAccount == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                              Text('Brak kont do wykonania przelewu.')));
+                      return;
                     }
-                    final result = await Navigator.of(context).pushNamed(TransferScreen.routeName);
-                    if (result == true && mounted) { _loadAccountDataAndRecentTransactions(); }
+                    final result = await Navigator.of(context)
+                        .pushNamed(TransferScreen.routeName);
+                    if (result == true && mounted) {
+                      _loadAccountDataAndRecentTransactions();
+                    }
                   },
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.history), label: const Text('Historia Transakcji'),
-                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () {
-                    if (_selectedAccount != null) { Navigator.of(context).pushNamed(TransactionHistoryScreen.routeName, arguments: _selectedAccount!); }
-                    else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz konto, aby zobaczyć historię lub brak kont.'))); }
+                  icon: const Icon(Icons.history),
+                  label: const Text('Historia Transakcji'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty)
+                      ? null
+                      : () {
+                    if (_selectedAccount != null) {
+                      Navigator.of(context).pushNamed(
+                          TransactionHistoryScreen.routeName,
+                          arguments: _selectedAccount!);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Wybierz konto, aby zobaczyć historię lub brak kont.')));
+                    }
                   },
                 ),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.credit_card), label: const Text('Zarządzaj Kartami'),
-                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty) ? null : () {
-                    if (_selectedAccount != null) { Navigator.of(context).pushNamed(ManageCardsScreen.routeName, arguments: _selectedAccount!); }
-                    else { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wybierz konto, aby zarządzać kartami lub brak kont.'))); }
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Zarządzaj Kartami'),
+                  onPressed: (_selectedAccount == null && _userAccounts.isNotEmpty)
+                      ? null
+                      : () {
+                    if (_selectedAccount != null) {
+                      Navigator.of(context).pushNamed(
+                          ManageCardsScreen.routeName,
+                          arguments: _selectedAccount!);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Wybierz konto, aby zarządzać kartami lub brak kont.')));
+                    }
                   },
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.event_repeat),
                   label: const Text('Zlecenia Stałe'),
                   onPressed: () {
-                    Navigator.of(context).pushNamed(ManageStandingOrdersScreen.routeName);
+                    Navigator.of(context)
+                        .pushNamed(ManageStandingOrdersScreen.routeName);
                   },
                 ),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.people_alt_outlined),
                   label: const Text('Zapisani Odbiorcy'),
                   onPressed: () {
-                    Navigator.of(context).pushNamed(ManageRecipientsScreen.routeName);
+                    Navigator.of(context)
+                        .pushNamed(ManageRecipientsScreen.routeName);
                   },
                 ),
               ],
             ),
             const SizedBox(height: 30),
-            const Text('Ostatnie Transakcje', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Ostatnie Transakcje',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
             Expanded(
               child: _isLoadingRecentTransactions
@@ -300,23 +360,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final bool isIncoming = transaction.isIncoming;
                   return ListTile(
                     leading: Icon(
-                      isIncoming ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                      color: isIncoming ? Colors.green.shade700 : Colors.red.shade700,
+                      isIncoming
+                          ? Icons.arrow_downward_rounded
+                          : Icons.arrow_upward_rounded,
+                      color: isIncoming
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
                     ),
-                    title: Text(transaction.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(transaction.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     subtitle: Text(
                         isIncoming
-                            ? (transaction.senderAccountNumber != null && transaction.senderAccountNumber!.isNotEmpty
+                            ? (transaction.senderAccountNumber != null &&
+                            transaction
+                                .senderAccountNumber!.isNotEmpty
                             ? 'Od: ${transaction.senderAccountNumber}'
-                            : transaction.recipientName.isNotEmpty ? 'Od: ${transaction.recipientName}' : transaction.transactionType)
+                            : transaction.recipientName.isNotEmpty
+                            ? 'Od: ${transaction.recipientName}'
+                            : transaction.transactionType)
                             : 'Do: ${transaction.recipientName}',
-                        maxLines: 1, overflow: TextOverflow.ellipsis
-                    ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     trailing: Text(
                       '${transaction.amount.toStringAsFixed(2)} ${transaction.currency}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: isIncoming ? Colors.green.shade700 : Colors.red.shade700,
+                        color: isIncoming
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                       ),
                     ),
                   );

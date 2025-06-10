@@ -53,17 +53,21 @@ class StandingOrder {
       id: json['id'] as int? ?? 0,
       userId: json['id_uzytkownika'] as int? ?? 0,
       sourceAccountId: json['id_konta_zrodlowego'] as int? ?? 0,
-      targetAccountNumber: json['nr_konta_docelowego'] as String? ?? 'Brak danych',
+      targetAccountNumber:
+      json['nr_konta_docelowego'] as String? ?? 'Brak danych',
       recipientName: json['nazwa_odbiorcy'] as String? ?? 'Brak danych',
       transferTitle: json['tytul_przelewu'] as String? ?? 'Brak tytułu',
       amount: (json['kwota'] as num? ?? 0).toDouble(),
       frequency: json['czestotliwosc'] as String? ?? 'Nieznana',
       startDate: tryParseDate(json['data_startu'] as String?) ?? defaultDate,
-      nextExecutionDate: tryParseDate(json['data_nastepnego_wykonania'] as String?),
+      nextExecutionDate:
+      tryParseDate(json['data_nastepnego_wykonania'] as String?),
       endDate: tryParseDate(json['data_zakonczenia'] as String?),
       isActive: json['aktywne'] as bool? ?? false,
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? defaultDate,
-      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ?? defaultDate,
+      createdAt:
+      DateTime.tryParse(json['created_at'] as String? ?? '') ?? defaultDate,
+      updatedAt:
+      DateTime.tryParse(json['updated_at'] as String? ?? '') ?? defaultDate,
     );
   }
 
@@ -76,7 +80,8 @@ class StandingOrder {
       'kwota': amount,
       'czestotliwosc': frequency,
       'data_startu': DateFormat('yyyy-MM-dd').format(startDate),
-      if (endDate != null) 'data_zakonczenia': DateFormat('yyyy-MM-dd').format(endDate!),
+      if (endDate != null)
+        'data_zakonczenia': DateFormat('yyyy-MM-dd').format(endDate!),
       'aktywne': isActive,
     };
   }
@@ -89,7 +94,8 @@ class StandingOrder {
       'kwota': amount,
       'czestotliwosc': frequency,
       'data_startu': DateFormat('yyyy-MM-dd').format(startDate),
-      if (endDate != null) 'data_zakonczenia': DateFormat('yyyy-MM-dd').format(endDate!),
+      if (endDate != null)
+        'data_zakonczenia': DateFormat('yyyy-MM-dd').format(endDate!),
       'aktywne': isActive,
     };
   }

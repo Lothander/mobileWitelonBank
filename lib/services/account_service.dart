@@ -13,12 +13,10 @@ class AccountService {
 
   Future<List<BankAccount>> getAccounts() async {
     if (_token == null) {
-      print("DEBUG: AccountService - Token is null. Cannot fetch accounts.");
       throw Exception('Brak autoryzacji. Zaloguj się ponownie.');
     }
 
     final url = Uri.parse('$_apiBaseUrl/konta');
-    print("DEBUG: AccountService - Attempting GET to $url");
 
     try {
       final response = await http.get(
@@ -30,24 +28,23 @@ class AccountService {
         },
       ).timeout(const Duration(seconds: 15));
 
-      print("DEBUG: AccountService - Response from /konta! Status: ${response.statusCode}");
-      print("DEBUG: AccountService - Response body from /konta: ${response.body}");
-
       if (response.statusCode == 200) {
-        final List<dynamic> responseData = jsonDecode(response.body) as List<dynamic>;
+        final List<dynamic> responseData =
+        jsonDecode(response.body) as List<dynamic>;
         return responseData
-            .map((accountJson) => BankAccount.fromJson(accountJson as Map<String, dynamic>))
+            .map((accountJson) =>
+            BankAccount.fromJson(accountJson as Map<String, dynamic>))
             .toList();
       } else if (response.statusCode == 401) {
         throw Exception('Sesja wygasła lub błąd autoryzacji (401).');
       } else {
-        throw Exception('Nie udało się pobrać danych konta. Kod: ${response.statusCode}');
+        throw Exception(
+            'Nie udało się pobrać danych konta. Kod: ${response.statusCode}');
       }
-    } on TimeoutException catch (e) {
-      print('Błąd w AccountService.getAccounts: TimeoutException - $e');
-      throw Exception('Serwer nie odpowiedział w wyznaczonym czasie. Sprawdź połączenie.');
+    } on TimeoutException {
+      throw Exception(
+          'Serwer nie odpowiedział w wyznaczonym czasie. Sprawdź połączenie.');
     } catch (error) {
-      print('Błąd sieciowy w AccountService.getAccounts: $error');
       throw Exception('Wystąpił błąd sieciowy podczas pobierania danych konta.');
     }
   }

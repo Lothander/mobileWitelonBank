@@ -7,7 +7,7 @@ class PaymentCard {
   final double dailyLimit;
   final String cardType;
   final bool? internetPaymentsActive;
-  final bool? contactlessPaymentsActive; 
+  final bool? contactlessPaymentsActive;
 
   PaymentCard({
     required this.id,
@@ -32,7 +32,9 @@ class PaymentCard {
     double parsedDailyLimit = 0.0;
     if (json['limit_dzienny'] != null) {
       if (json['limit_dzienny'] is String) {
-        parsedDailyLimit = double.tryParse((json['limit_dzienny'] as String).replaceAll(',', '.')) ?? 0.0;
+        parsedDailyLimit = double.tryParse(
+            (json['limit_dzienny'] as String).replaceAll(',', '.')) ??
+            0.0;
       } else if (json['limit_dzienny'] is num) {
         parsedDailyLimit = (json['limit_dzienny'] as num).toDouble();
       }
@@ -47,17 +49,19 @@ class PaymentCard {
       accId = 0;
     }
 
-
     return PaymentCard(
       id: json['id'] as int? ?? 0,
       accountId: accId,
       cardNumber: cardNumberValue,
-      expiryDate: DateTime.tryParse(json['data_waznosci'] as String? ?? '') ?? DateTime(1970),
+      expiryDate:
+      DateTime.tryParse(json['data_waznosci'] as String? ?? '') ??
+          DateTime(1970),
       isBlocked: json['zablokowana'] as bool? ?? true,
       dailyLimit: parsedDailyLimit,
       cardType: json['typ_karty'] as String? ?? 'Nieznany',
       internetPaymentsActive: json['platnosci_internetowe_aktywne'] as bool?,
-      contactlessPaymentsActive: json['platnosci_zblizeniowe_aktywne'] as bool?,
+      contactlessPaymentsActive:
+      json['platnosci_zblizeniowe_aktywne'] as bool?,
     );
   }
 
@@ -75,8 +79,10 @@ class PaymentCard {
       isBlocked: isBlocked ?? this.isBlocked,
       dailyLimit: dailyLimit ?? this.dailyLimit,
       cardType: cardType,
-      internetPaymentsActive: internetPaymentsActive ?? this.internetPaymentsActive,
-      contactlessPaymentsActive: contactlessPaymentsActive ?? this.contactlessPaymentsActive,
+      internetPaymentsActive:
+      internetPaymentsActive ?? this.internetPaymentsActive,
+      contactlessPaymentsActive:
+      contactlessPaymentsActive ?? this.contactlessPaymentsActive,
     );
   }
 

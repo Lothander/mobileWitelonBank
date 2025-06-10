@@ -42,7 +42,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             message.toLowerCase().contains('sent') ||
             message.toLowerCase().contains('sprawdź email') ||
             message.toLowerCase().contains('check your email') ||
-            message.toLowerCase().contains('link do resetowania hasła został wysłany') ||
+            message
+                .toLowerCase()
+                .contains('link do resetowania hasła został wysłany') ||
             message.toLowerCase().contains('jeśli użytkownik istnieje')) {
           _isSuccess = true;
         }
@@ -64,7 +66,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Icon(Icons.lock_reset, size: 60, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.lock_reset,
+                    size: 60, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 20),
                 const Text(
                   'Wprowadź swój adres email powiązany z kontem. Jeśli konto istnieje, wyślemy na nie instrukcję resetowania hasła.',
@@ -75,7 +78,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 TextFormField(
                   key: const ValueKey('email_reset_password_input'),
                   validator: (value) {
-                    if (value == null || value.isEmpty || !value.contains('@')) {
+                    if (value == null ||
+                        value.isEmpty ||
+                        !value.contains('@')) {
                       return 'Proszę podać poprawny adres email.';
                     }
                     return null;
@@ -99,7 +104,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 15),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                     child: const Text('Wyślij Żądanie'),
@@ -110,7 +116,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     child: Text(
                       _feedbackMessage!,
                       style: TextStyle(
-                        color: _isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+                        color: _isSuccess
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),

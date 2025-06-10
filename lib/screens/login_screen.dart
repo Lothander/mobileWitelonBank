@@ -25,14 +25,10 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _emailFor2FA;
 
   Future<void> _handleLoginStep1() async {
-    print("DEBUG: _handleLoginStep1 CALLED");
-
     if (!_formKey.currentState!.validate()) {
-      print("DEBUG: Form validation FAILED in _handleLoginStep1");
       return;
     }
     _formKey.currentState!.save();
-    print("DEBUG: Form saved in _handleLoginStep1. Email: $_email, Password: $_password");
 
     setState(() {
       _isLoading = true;
@@ -40,7 +36,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authService = Provider.of<AuthService>(context, listen: false);
-    print("DEBUG: Calling authService.loginStep1Request2FACode...");
     final result = await authService.loginStep1Request2FACode(_email, _password);
     if (!mounted) return;
 
@@ -77,7 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     final authService = Provider.of<AuthService>(context, listen: false);
-    final success = await authService.loginStep2Verify2FACode(_emailFor2FA!, _twoFactorCode);
+    final success =
+    await authService.loginStep2Verify2FACode(_emailFor2FA!, _twoFactorCode);
 
     if (!mounted) return;
 
@@ -97,7 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _formKey.currentState?.reset();
     });
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -130,23 +125,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(height: 20),
-
                 if (_errorMessage != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12.0),
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: _formState == LoginFormState.enter2FACode && _errorMessage!.toLowerCase().contains("wysłano") ? Colors.green.shade700 : Colors.red.shade700),
+                      style: TextStyle(
+                          color: _formState == LoginFormState.enter2FACode &&
+                              _errorMessage!
+                                  .toLowerCase()
+                                  .contains("wysłano")
+                              ? Colors.green.shade700
+                              : Colors.red.shade700),
                       textAlign: TextAlign.center,
                     ),
                   ),
-
                 if (_formState == LoginFormState.enterCredentials) ...[
                   TextFormField(
                     key: const ValueKey('email_login'),
                     initialValue: _email,
                     validator: (value) {
-                      if (value == null || value.isEmpty || !value.contains('@')) {
+                      if (value == null ||
+                          value.isEmpty ||
+                          !value.contains('@')) {
                         return 'Proszę podać poprawny adres email.';
                       }
                       return null;
@@ -165,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     key: const ValueKey('password_login'),
                     validator: (value) {
-                      if (value == null || value.isEmpty || value.length < 5) { // Dostosuj długość hasła, jeśli API ma inne wymagania
+                      if (value == null || value.isEmpty || value.length < 5) {
                         return 'Hasło musi mieć co najmniej 5 znaków.';
                       }
                       return null;
@@ -184,8 +185,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _isLoading ? null : () {
-                        Navigator.of(context).pushNamed(ForgotPasswordScreen.routeName);
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                        Navigator.of(context)
+                            .pushNamed(ForgotPasswordScreen.routeName);
                       },
                       child: const Text('Zapomniałem hasła'),
                     ),
@@ -227,7 +231,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 15),
                       textStyle: const TextStyle(fontSize: 16),
                     ),
                     child: Text(_formState == LoginFormState.enterCredentials

@@ -41,31 +41,36 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
     if (!mounted) return;
     setState(() {
       _isLoadingAction = false;
-      _cardsFuture = _getCardService().getCardsForAccount(widget.account.id)
-          .then((loadedCards) {
-        if (mounted) {
-          setState(() {
-            _cards = loadedCards;
+      _cardsFuture =
+          _getCardService().getCardsForAccount(widget.account.id).then((loadedCards) {
+            if (mounted) {
+              setState(() {
+                _cards = loadedCards;
+              });
+            }
+            return loadedCards;
+          }).catchError((error) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        'Błąd ładowania kart: ${error.toString().split(':').last.trim()}'),
+                    backgroundColor: Colors.red),
+              );
+              setState(() {
+                _cards = [];
+              });
+            }
+            throw error;
           });
-        }
-        return loadedCards;
-      }).catchError((error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Błąd ładowania kart: ${error.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
-          );
-          setState(() {
-            _cards = [];
-          });
-        }
-        throw error;
-      });
     });
   }
 
   Future<void> _toggleBlockCard(PaymentCard card) async {
     if (!mounted) return;
-    setState(() { _isLoadingAction = true; });
+    setState(() {
+      _isLoadingAction = true;
+    });
     try {
       PaymentCard updatedCard;
       if (card.isBlocked) {
@@ -75,15 +80,22 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
       }
       _updateCardInList(updatedCard);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Karta ${updatedCard.isBlocked ? "zablokowana" : "odblokowana"} pomyślnie.'), backgroundColor: Colors.green),
+        SnackBar(
+            content:
+            Text('Karta ${updatedCard.isBlocked ? "zablokowana" : "odblokowana"} pomyślnie.'),
+            backgroundColor: Colors.green),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Błąd: ${e.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Błąd: ${e.toString().split(':').last.trim()}'),
+            backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
-        setState(() { _isLoadingAction = false; });
+        setState(() {
+          _isLoadingAction = false;
+        });
       }
     }
   }
@@ -94,31 +106,45 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
       final newLimitInt = int.tryParse(newLimitString);
       if (newLimitInt != null && newLimitInt >= 0) {
         if (!mounted) return;
-        setState(() { _isLoadingAction = true; });
+        setState(() {
+          _isLoadingAction = true;
+        });
         try {
-          final updatedCard = await _getCardService().changeDailyLimit(card.id, newLimitInt.toDouble());
+          final updatedCard = await _getCardService()
+              .changeDailyLimit(card.id, newLimitInt.toDouble());
           _updateCardInList(updatedCard);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Limit dzienny zmieniony pomyślnie.'), backgroundColor: Colors.green),
+            const SnackBar(
+                content: Text('Limit dzienny zmieniony pomyślnie.'),
+                backgroundColor: Colors.green),
           );
         } catch (e) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Błąd zmiany limitu: ${e.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
+            SnackBar(
+                content: Text(
+                    'Błąd zmiany limitu: ${e.toString().split(':').last.trim()}'),
+                backgroundColor: Colors.red),
           );
         } finally {
           if (mounted) {
-            setState(() { _isLoadingAction = false; });
+            setState(() {
+              _isLoadingAction = false;
+            });
           }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Niepoprawna wartość limitu (musi być liczbą całkowitą nieujemną).'), backgroundColor: Colors.orange),
+          const SnackBar(
+              content: Text(
+                  'Niepoprawna wartość limitu (musi być liczbą całkowitą nieujemną).'),
+              backgroundColor: Colors.orange),
         );
       }
     }
   }
 
-  Future<void> _changePaymentSettings(PaymentCard card, {bool? internet, bool? contactless}) async {
+  Future<void> _changePaymentSettings(PaymentCard card,
+      {bool? internet, bool? contactless}) async {
     bool changeInternet = internet != null;
     bool changeContactless = contactless != null;
 
@@ -126,7 +152,9 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
       return;
     }
     if (!mounted) return;
-    setState(() { _isLoadingAction = true; });
+    setState(() {
+      _isLoadingAction = true;
+    });
     try {
       final updatedCard = await _getCardService().updatePaymentSettings(
         card.id,
@@ -135,15 +163,22 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
       );
       _updateCardInList(updatedCard);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ustawienia płatności zmienione pomyślnie.'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Ustawienia płatności zmienione pomyślnie.'),
+            backgroundColor: Colors.green),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Błąd zmiany ustawień: ${e.toString().split(':').last.trim()}'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text(
+                'Błąd zmiany ustawień: ${e.toString().split(':').last.trim()}'),
+            backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
-        setState(() { _isLoadingAction = false; });
+        setState(() {
+          _isLoadingAction = false;
+        });
       }
     }
   }
@@ -165,10 +200,10 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
     return DateFormat('MM/yy').format(date);
   }
 
-  Future<String?> _showChangeLimitDialog(BuildContext context, PaymentCard card) async {
-    final TextEditingController limitController = TextEditingController(
-        text: card.dailyLimit.toInt().toString()
-    );
+  Future<String?> _showChangeLimitDialog(
+      BuildContext context, PaymentCard card) async {
+    final TextEditingController limitController =
+    TextEditingController(text: card.dailyLimit.toInt().toString());
     final String currency = widget.account.currency;
 
     return showDialog<String>(
@@ -182,16 +217,15 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
             children: [
               Text(
                 'Obecny limit: ${card.dailyLimit.toInt()} $currency',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                style:
+                const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: limitController,
                 autofocus: true,
                 keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly
-                ],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(
                   labelText: 'Nowy limit',
                   suffixText: currency,
@@ -219,7 +253,8 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
     );
   }
 
-  Future<void> _showTogglePaymentSettingDialog(BuildContext context, PaymentCard card, String settingType) async {
+  Future<void> _showTogglePaymentSettingDialog(
+      BuildContext context, PaymentCard card, String settingType) async {
     bool? enableSetting = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -241,7 +276,8 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               currentSettingState != null
-                  ? Text('Aktualny stan: ${currentSettingState ? "Włączone" : "Wyłączone"}')
+                  ? Text(
+                  'Aktualny stan: ${currentSettingState ? "Włączone" : "Wyłączone"}')
                   : const Text('Aktualny stan: Nieznany (odśwież listę kart)'),
               const SizedBox(height: 10),
               const Text('Wybierz nową opcję:'),
@@ -300,9 +336,11 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
                   itemBuilder: (context, index) {
                     final card = _cards[index];
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 8),
                       elevation: 3,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -313,38 +351,61 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
                               children: [
                                 Text(
                                   card.maskedCardNumber,
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.5, fontFamily: 'monospace'),
+                                  style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
+                                      fontFamily: 'monospace'),
                                 ),
                                 Icon(
-                                  card.cardType.toLowerCase().contains('visa') ? Icons.payment :
-                                  card.cardType.toLowerCase().contains('mastercard') ? Icons.payments_outlined : Icons.credit_card,
+                                  card.cardType.toLowerCase().contains('visa')
+                                      ? Icons.payment
+                                      : card.cardType
+                                      .toLowerCase()
+                                      .contains('mastercard')
+                                      ? Icons.payments_outlined
+                                      : Icons.credit_card,
                                   color: Theme.of(context).colorScheme.primary,
                                   size: 30,
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('Ważna do: ${_formatExpiryDate(card.expiryDate)}', style: TextStyle(color: Colors.grey[700])),
-                            Text('Typ: ${card.cardType}', style: TextStyle(color: Colors.grey[700])),
-                            Text('Limit dzienny: ${card.dailyLimit.toInt()} ${widget.account.currency}', style: TextStyle(color: Colors.grey[700])),
-
+                            Text(
+                                'Ważna do: ${_formatExpiryDate(card.expiryDate)}',
+                                style: TextStyle(color: Colors.grey[700])),
+                            Text('Typ: ${card.cardType}',
+                                style: TextStyle(color: Colors.grey[700])),
+                            Text(
+                                'Limit dzienny: ${card.dailyLimit.toInt()} ${widget.account.currency}',
+                                style: TextStyle(color: Colors.grey[700])),
                             if (card.internetPaymentsActive != null)
-                              Text('Płatności internetowe: ${card.internetPaymentsActive! ? "Włączone" : "Wyłączone"}', style: TextStyle(color: Colors.grey[700]))
+                              Text(
+                                  'Płatności internetowe: ${card.internetPaymentsActive! ? "Włączone" : "Wyłączone"}',
+                                  style: TextStyle(color: Colors.grey[700]))
                             else
-                              Text('Płatności internetowe: Nieznane', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic)),
-
+                              Text('Płatności internetowe: Nieznane',
+                                  style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontStyle: FontStyle.italic)),
                             if (card.contactlessPaymentsActive != null)
-                              Text('Płatności zbliżeniowe: ${card.contactlessPaymentsActive! ? "Włączone" : "Wyłączone"}', style: TextStyle(color: Colors.grey[700]))
+                              Text(
+                                  'Płatności zbliżeniowe: ${card.contactlessPaymentsActive! ? "Włączone" : "Wyłączone"}',
+                                  style: TextStyle(color: Colors.grey[700]))
                             else
-                              Text('Płatności zbliżeniowe: Nieznane', style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic)),
-
+                              Text('Płatności zbliżeniowe: Nieznane',
+                                  style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontStyle: FontStyle.italic)),
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 Text(
                                   card.isBlocked ? 'ZABLOKOWANA' : 'AKTYWNA',
                                   style: TextStyle(
-                                    color: card.isBlocked ? Colors.redAccent : Colors.green.shade700,
+                                    color: card.isBlocked
+                                        ? Colors.redAccent
+                                        : Colors.green.shade700,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -354,12 +415,15 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
                                   tooltip: "Ustawienia płatności",
                                   onSelected: (value) {
                                     if (value == 'toggle_internet') {
-                                      _showTogglePaymentSettingDialog(context, card, 'internet');
+                                      _showTogglePaymentSettingDialog(
+                                          context, card, 'internet');
                                     } else if (value == 'toggle_contactless') {
-                                      _showTogglePaymentSettingDialog(context, card, 'contactless');
+                                      _showTogglePaymentSettingDialog(
+                                          context, card, 'contactless');
                                     }
                                   },
-                                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                  itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
                                     const PopupMenuItem<String>(
                                       value: 'toggle_internet',
                                       child: Text('Płatności internetowe'),
@@ -377,21 +441,32 @@ class _ManageCardsScreenState extends State<ManageCardsScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 TextButton.icon(
-                                  icon: Icon(card.isBlocked ? Icons.lock_open_outlined : Icons.lock_outline),
-                                  label: Text(card.isBlocked ? 'Odblokuj' : 'Zablokuj'),
-                                  onPressed: _isLoadingAction ? null : () => _toggleBlockCard(card),
+                                  icon: Icon(card.isBlocked
+                                      ? Icons.lock_open_outlined
+                                      : Icons.lock_outline),
+                                  label: Text(
+                                      card.isBlocked ? 'Odblokuj' : 'Zablokuj'),
+                                  onPressed: _isLoadingAction
+                                      ? null
+                                      : () => _toggleBlockCard(card),
                                   style: TextButton.styleFrom(
-                                    foregroundColor: card.isBlocked ? Colors.green.shade700 : Colors.redAccent,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    foregroundColor: card.isBlocked
+                                        ? Colors.green.shade700
+                                        : Colors.redAccent,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 TextButton.icon(
                                   icon: const Icon(Icons.speed_outlined),
                                   label: const Text('Zmień limit'),
-                                  onPressed: _isLoadingAction ? null : () => _changeDailyLimit(card),
+                                  onPressed: _isLoadingAction
+                                      ? null
+                                      : () => _changeDailyLimit(card),
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                   ),
                                 ),
                               ],

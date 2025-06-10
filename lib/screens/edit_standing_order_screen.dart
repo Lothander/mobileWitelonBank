@@ -18,7 +18,8 @@ class EditStandingOrderScreen extends StatefulWidget {
   bool get isEditing => existingOrder != null;
 
   @override
-  State<EditStandingOrderScreen> createState() => _EditStandingOrderScreenState();
+  State<EditStandingOrderScreen> createState() =>
+      _EditStandingOrderScreenState();
 }
 
 class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
@@ -38,7 +39,12 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isActive = true;
-  final List<String> _frequencyOptions = ['miesiecznie', 'tygodniowo', 'rocznie', 'codziennie'];
+  final List<String> _frequencyOptions = [
+    'miesiecznie',
+    'tygodniowo',
+    'rocznie',
+    'codziennie'
+  ];
 
   @override
   void initState() {
@@ -50,7 +56,8 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       _targetAccountController.text = order.targetAccountNumber;
       _recipientNameController.text = order.recipientName;
       _titleController.text = order.transferTitle;
-      _amountController.text = order.amount.toStringAsFixed(2).replaceAll('.', ',');
+      _amountController.text =
+          order.amount.toStringAsFixed(2).replaceAll('.', ',');
       if (_frequencyOptions.contains(order.frequency)) {
         _selectedFrequency = order.frequency;
       } else {
@@ -74,7 +81,10 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
 
   Future<void> _loadUserAccounts() async {
     if (!mounted) return;
-    setState(() { _isLoading = true; _feedbackMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _feedbackMessage = null;
+    });
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       if (authService.isAuthenticated && authService.token != null) {
@@ -90,11 +100,9 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
               if (widget.isEditing && widget.existingOrder != null) {
                 try {
                   _selectedSourceAccount = _userAccounts.firstWhere(
-                          (acc) => acc.id == widget.existingOrder!.sourceAccountId
-                  );
+                          (acc) => acc.id == widget.existingOrder!.sourceAccountId);
                 } catch (e) {
                   _selectedSourceAccount = _userAccounts[0];
-                  print("Konto źródłowe (${widget.existingOrder!.sourceAccountId}) z edytowanego zlecenia nie znalezione, ustawiono pierwsze dostępne.");
                 }
               } else {
                 _selectedSourceAccount = _userAccounts[0];
@@ -112,7 +120,8 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _feedbackMessage = "Błąd ładowania kont: ${error.toString().split(':').last.trim()}";
+          _feedbackMessage =
+          "Błąd ładowania kont: ${error.toString().split(':').last.trim()}";
           _userAccounts = [];
           _selectedSourceAccount = null;
         });
@@ -121,11 +130,14 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    DateTime initialDatePickerDate = (isStartDate ? _startDate : _endDate) ?? DateTime.now();
+    DateTime initialDatePickerDate =
+        (isStartDate ? _startDate : _endDate) ?? DateTime.now();
     DateTime firstDatePickerDate;
 
     if (isStartDate) {
-      firstDatePickerDate = (widget.isEditing && widget.existingOrder != null && widget.existingOrder!.startDate.isBefore(DateTime.now()))
+      firstDatePickerDate = (widget.isEditing &&
+          widget.existingOrder != null &&
+          widget.existingOrder!.startDate.isBefore(DateTime.now()))
           ? widget.existingOrder!.startDate
           : DateTime.now();
       if (initialDatePickerDate.isBefore(firstDatePickerDate)) {
@@ -164,21 +176,32 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       return;
     }
     if (_selectedSourceAccount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proszę wybrać konto źródłowe.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Proszę wybrać konto źródłowe.'),
+          backgroundColor: Colors.red));
       return;
     }
     if (_startDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proszę wybrać datę startu.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Proszę wybrać datę startu.'),
+          backgroundColor: Colors.red));
       return;
     }
     if (_selectedFrequency == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proszę wybrać częstotliwość.'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Proszę wybrać częstotliwość.'),
+          backgroundColor: Colors.red));
       return;
     }
 
-    setState(() { _isLoading = true; _feedbackMessage = null; _isSuccess = false; });
+    setState(() {
+      _isLoading = true;
+      _feedbackMessage = null;
+      _isSuccess = false;
+    });
 
-    final double amount = double.parse(_amountController.text.replaceAll(',', '.'));
+    final double amount =
+    double.parse(_amountController.text.replaceAll(',', '.'));
 
     final orderDataForSubmission = StandingOrder(
       id: widget.isEditing ? widget.existingOrder!.id : 0,
@@ -192,8 +215,11 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       startDate: _startDate!,
       endDate: _endDate,
       isActive: _isActive,
-      nextExecutionDate: widget.isEditing ? widget.existingOrder!.nextExecutionDate : DateTime.now(),
-      createdAt: widget.isEditing ? widget.existingOrder!.createdAt : DateTime.now(),
+      nextExecutionDate: widget.isEditing
+          ? widget.existingOrder!.nextExecutionDate
+          : DateTime.now(),
+      createdAt:
+      widget.isEditing ? widget.existingOrder!.createdAt : DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
@@ -202,7 +228,8 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       String successMessage;
 
       if (widget.isEditing) {
-        await service.updateStandingOrder(widget.existingOrder!.id, orderDataForSubmission);
+        await service.updateStandingOrder(
+            widget.existingOrder!.id, orderDataForSubmission);
         successMessage = 'Zlecenie stałe zaktualizowane pomyślnie.';
       } else {
         await service.createStandingOrder(orderDataForSubmission);
@@ -210,7 +237,11 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
       }
 
       if (mounted) {
-        setState(() { _isLoading = false; _isSuccess = true; _feedbackMessage = successMessage; });
+        setState(() {
+          _isLoading = false;
+          _isSuccess = true;
+          _feedbackMessage = successMessage;
+        });
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) {
           Navigator.of(context).pop(true);
@@ -221,7 +252,8 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
         setState(() {
           _isLoading = false;
           _isSuccess = false;
-          _feedbackMessage = "Błąd: ${error.toString().split(':').last.trim()}";
+          _feedbackMessage =
+          "Błąd: ${error.toString().split(':').last.trim()}";
         });
       }
     }
@@ -240,7 +272,9 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Edytuj Zlecenie Stałe' : 'Nowe Zlecenie Stałe'),
+        title: Text(widget.isEditing
+            ? 'Edytuj Zlecenie Stałe'
+            : 'Nowe Zlecenie Stałe'),
       ),
       body: _isLoading && _userAccounts.isEmpty
           ? const Center(child: CircularProgressIndicator())
@@ -256,55 +290,81 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
                   padding: const EdgeInsets.only(bottom: 12.0),
                   child: Text(
                     _feedbackMessage!,
-                    style: TextStyle(color: _isSuccess ? Colors.green.shade700 : Colors.red.shade700, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        color: _isSuccess
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                        fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
                   ),
                 ),
-
               if (_userAccounts.isNotEmpty)
                 DropdownButtonFormField<BankAccount>(
                   value: _selectedSourceAccount,
-                  decoration: const InputDecoration(labelText: 'Z konta', border: OutlineInputBorder(), prefixIcon: Icon(Icons.account_balance_wallet)),
+                  decoration: const InputDecoration(
+                      labelText: 'Z konta',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.account_balance_wallet)),
                   items: _userAccounts.map((BankAccount account) {
                     return DropdownMenuItem<BankAccount>(
                       value: account,
-                      child: Text('${account.accountNumber} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
+                      child: Text(
+                          '${account.accountNumber} (${account.balance.toStringAsFixed(2)} ${account.currency})'),
                     );
                   }).toList(),
-                  onChanged: (BankAccount? newValue) => setState(() => _selectedSourceAccount = newValue),
-                  validator: (value) => value == null ? 'Wybierz konto' : null,
+                  onChanged: (BankAccount? newValue) =>
+                      setState(() => _selectedSourceAccount = newValue),
+                  validator: (value) =>
+                  value == null ? 'Wybierz konto' : null,
                 )
               else if (!_isLoading)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Text(
-                    _feedbackMessage == null && _userAccounts.isEmpty ? 'Brak dostępnych kont.' : (_feedbackMessage ?? ''),
-                    style: TextStyle(color: _feedbackMessage == null ? Colors.grey : Colors.red),
+                    _feedbackMessage == null && _userAccounts.isEmpty
+                        ? 'Brak dostępnych kont.'
+                        : (_feedbackMessage ?? ''),
+                    style: TextStyle(
+                        color: _feedbackMessage == null
+                            ? Colors.grey
+                            : Colors.red),
                     textAlign: TextAlign.center,
                   ),
                 ),
-
               const SizedBox(height: 16),
               TextFormField(
                 controller: _targetAccountController,
-                decoration: const InputDecoration(labelText: 'Nr konta odbiorcy (IBAN)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.account_balance)),
+                decoration: const InputDecoration(
+                    labelText: 'Nr konta odbiorcy (IBAN)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.account_balance)),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
-                  if (!RegExp(r'^PL\d{26}$').hasMatch(value)) return 'Niepoprawny format IBAN PL (PL + 26 cyfr)';
+                  if (value == null || value.isEmpty)
+                    return 'Pole wymagane';
+                  if (!RegExp(r'^PL\d{26}$').hasMatch(value))
+                    return 'Niepoprawny format IBAN PL (PL + 26 cyfr)';
                   return null;
                 },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _recipientNameController,
-                decoration: const InputDecoration(labelText: 'Nazwa odbiorcy', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person)),
-                validator: (value) => value == null || value.isEmpty ? 'Pole wymagane' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Nazwa odbiorcy',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person)),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Pole wymagane' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Tytuł przelewu', border: OutlineInputBorder(), prefixIcon: Icon(Icons.title)),
-                validator: (value) => value == null || value.isEmpty ? 'Pole wymagane' : null,
+                decoration: const InputDecoration(
+                    labelText: 'Tytuł przelewu',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.title)),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Pole wymagane' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -315,38 +375,61 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
                   prefixIcon: const Icon(Icons.attach_money),
                   suffixText: _selectedSourceAccount?.currency ?? 'PLN',
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*([.,]?\d{0,2})'))],
+                keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d*([.,]?\d{0,2})'))
+                ],
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Pole wymagane';
-                  final amount = double.tryParse(value.replaceAll(',', '.'));
-                  if (amount == null || amount <= 0) return 'Niepoprawna kwota (musi być większa od 0)';
+                  if (value == null || value.isEmpty)
+                    return 'Pole wymagane';
+                  final amount =
+                  double.tryParse(value.replaceAll(',', '.'));
+                  if (amount == null || amount <= 0)
+                    return 'Niepoprawna kwota (musi być większa od 0)';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedFrequency,
-                decoration: const InputDecoration(labelText: 'Częstotliwość', border: OutlineInputBorder(), prefixIcon: Icon(Icons.event_repeat)),
+                decoration: const InputDecoration(
+                    labelText: 'Częstotliwość',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.event_repeat)),
                 items: _frequencyOptions.map((String value) {
-                  return DropdownMenuItem<String>(value: value, child: Text(value));
+                  return DropdownMenuItem<String>(
+                      value: value, child: Text(value));
                 }).toList(),
-                onChanged: (String? newValue) => setState(() => _selectedFrequency = newValue),
-                validator: (value) => value == null ? 'Wybierz częstotliwość' : null,
+                onChanged: (String? newValue) =>
+                    setState(() => _selectedFrequency = newValue),
+                validator: (value) =>
+                value == null ? 'Wybierz częstotliwość' : null,
               ),
               const SizedBox(height: 16),
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0), side: BorderSide(color: Colors.grey.shade400)),
-                title: Text(_startDate == null ? 'Wybierz datę startu' : 'Data startu: ${DateFormat('dd.MM.yyyy').format(_startDate!)}'),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12.0, vertical: 4.0),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4.0),
+                    side: BorderSide(color: Colors.grey.shade400)),
+                title: Text(_startDate == null
+                    ? 'Wybierz datę startu'
+                    : 'Data startu: ${DateFormat('dd.MM.yyyy').format(_startDate!)}'),
                 trailing: const Icon(Icons.calendar_today),
-                onTap: () => _selectDate(context, true), // Na razie bez blokady edycji daty startu
+                onTap: () => _selectDate(context, true),
               ),
               const SizedBox(height: 16),
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0), side: BorderSide(color: Colors.grey.shade400)),
-                title: Text(_endDate == null ? 'Data zakończenia (opcjonalnie)' : 'Data zakończenia: ${DateFormat('dd.MM.yyyy').format(_endDate!)}'),
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12.0, vertical: 4.0),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4.0),
+                    side: BorderSide(color: Colors.grey.shade400)),
+                title: Text(_endDate == null
+                    ? 'Data zakończenia (opcjonalnie)'
+                    : 'Data zakończenia: ${DateFormat('dd.MM.yyyy').format(_endDate!)}'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -367,18 +450,22 @@ class _EditStandingOrderScreenState extends State<EditStandingOrderScreen> {
                 value: _isActive,
                 onChanged: (bool value) => setState(() => _isActive = value),
                 activeColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0), side: BorderSide(color: Colors.grey.shade400)),
-                contentPadding: const EdgeInsets.only(left:16.0, right: 6.0),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4.0),
+                    side: BorderSide(color: Colors.grey.shade400)),
+                contentPadding:
+                const EdgeInsets.only(left: 16.0, right: 6.0),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(vertical: 15)
-                ),
-                child: Text(widget.isEditing ? 'Zapisz Zmiany' : 'Utwórz Zlecenie'),
+                    foregroundColor:
+                    Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 15)),
+                child: Text(
+                    widget.isEditing ? 'Zapisz Zmiany' : 'Utwórz Zlecenie'),
               ),
             ],
           ),
