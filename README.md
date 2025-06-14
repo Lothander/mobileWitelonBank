@@ -27,4 +27,3 @@
 | WBK-16 | Użytkownik może eksportować historię transakcji.                                                                        | ✓   | ✓   | ✓      | ✓       |
 | WBK-17 | Użytkownik może zamknąć konto.                                                                                          | ✓   | ✓   |        |         |
 | WBK-18 | Użytkownik może się wylogować.                                                                                          | ✓   | ✓   | ✓      | ✓       |
-| WBK-19 | System obsługuje język polski, angielski i niemiecki.                                                                   | ✓   | ✓   | ✓      | ✓       |
